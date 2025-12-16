@@ -1,0 +1,13 @@
+train: ./data/green_laser_v21/train/images
+val: ./data/green_laser_v21/valid/images
+test: ./data/green_laser_v21/test/images
+
+nc: 11
+names: ['0', '1', '10', '2', '3', '4', '5', '6', '7', '8', '9']
+
+roboflow:
+  workspace: soil-moisture
+  project: green-lazer-moisture
+  version: 21
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/soil-moisture/green-lazer-moisture/dataset/21
