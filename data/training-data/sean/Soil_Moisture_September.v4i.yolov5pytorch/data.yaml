@@ -1,0 +1,13 @@
+train: ./data/training-data/sean/Soil_Moisture_September.v4i.yolov5pytorch/train/images
+val: ./data/training-data/sean/Soil_Moisture_September.v4i.yolov5pytorch/valid/images
+test: ./data/training-data/sean/Soil_Moisture_September.v4i.yolov5pytorch/test/images
+
+nc: 9
+names: ['0', '1', '10', '3', '4', '5', '7', '8', '9']
+
+roboflow:
+  workspace: robotics-lab-1
+  project: soil_moisture_september
+  version: 4
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/robotics-lab-1/soil_moisture_september/dataset/4

@@ -1,0 +1,13 @@
+train: ./data/training-data/sean/Soil Moisture.v1i.yolov5pytorch/train/images
+val: ./data/training-data/sean/Soil Moisture.v1i.yolov5pytorch/valid/images
+test: ./data/training-data/sean/Soil Moisture.v1i.yolov5pytorch/test/images
+
+nc: 5
+names: ['soil-moisture-1.0', 'soil-moisture-2.0', 'soil-moisture-3.0', 'soil-moisture-5.0', 'soil-moisture-8.2']
+
+roboflow:
+  workspace: robotics-lab-1
+  project: soil-moisture-5sagf
+  version: 1
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/robotics-lab-1/soil-moisture-5sagf/dataset/1
