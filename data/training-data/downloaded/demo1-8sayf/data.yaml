@@ -1,0 +1,13 @@
+names:
+- '4'
+- '8'
+nc: 2
+roboflow:
+  license: CC BY 4.0
+  project: demo1-8sayf
+  url: https://universe.roboflow.com/robotics-lab-1/demo1-8sayf/dataset/1
+  version: 1
+  workspace: robotics-lab-1
+test: ../test/images
+train: ./data/training-data/downloaded/demo1-8sayf/train/images
+val: ./data/training-data/downloaded/demo1-8sayf/valid/images

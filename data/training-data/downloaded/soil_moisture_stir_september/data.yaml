@@ -1,0 +1,16 @@
+names:
+- '1'
+- '10'
+- '3'
+- '7'
+- '8'
+nc: 5
+roboflow:
+  license: CC BY 4.0
+  project: soil_moisture_stir_september
+  url: https://universe.roboflow.com/robotics-lab-1/soil_moisture_stir_september/dataset/1
+  version: 1
+  workspace: robotics-lab-1
+test: ../test/images
+train: ./data/training-data/downloaded/soil_moisture_stir_september/train/images
+val: ./data/training-data/downloaded/soil_moisture_stir_september/valid/images

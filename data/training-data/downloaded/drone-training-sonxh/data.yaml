@@ -1,0 +1,12 @@
+names:
+- drone
+nc: 1
+roboflow:
+  license: CC BY 4.0
+  project: drone-training-sonxh
+  url: https://universe.roboflow.com/robotics-lab-1/drone-training-sonxh/dataset/4
+  version: 4
+  workspace: robotics-lab-1
+test: ../test/images
+train: ./data/training-data/downloaded/drone-training-sonxh/train/images
+val: ./data/training-data/downloaded/drone-training-sonxh/valid/images

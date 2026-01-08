@@ -1,0 +1,14 @@
+names:
+- '0'
+- '10'
+- '9'
+nc: 3
+roboflow:
+  license: CC BY 4.0
+  project: 12-tut-rach
+  url: https://universe.roboflow.com/robotics-lab-1/12-tut-rach/dataset/3
+  version: 3
+  workspace: robotics-lab-1
+test: ../test/images
+train: ./data/training-data/downloaded/12-tut-rach/train/images
+val: ./data/training-data/downloaded/12-tut-rach/valid/images

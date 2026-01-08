@@ -1,0 +1,22 @@
+names:
+- '0'
+- '1'
+- '10'
+- '2'
+- '3'
+- '4'
+- '5'
+- '6'
+- '7'
+- '8'
+- '9'
+nc: 11
+roboflow:
+  license: CC BY 4.0
+  project: soil-moisture-v4
+  url: https://universe.roboflow.com/robotics-lab-1/soil-moisture-v4/dataset/3
+  version: 3
+  workspace: robotics-lab-1
+test: ../test/images
+train: ./data/training-data/downloaded/soil-moisture-v4/train/images
+val: ./data/training-data/downloaded/soil-moisture-v4/valid/images

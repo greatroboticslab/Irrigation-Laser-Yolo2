@@ -1,0 +1,14 @@
+names:
+- head
+- helmet
+- person
+nc: 3
+roboflow:
+  license: Public Domain
+  project: hard-hat-sample-w9zqx
+  url: https://app.roboflow.com/robotics-lab-1/hard-hat-sample-w9zqx/2
+  version: 2
+  workspace: robotics-lab-1
+test: ../test/images
+train: ./data/training-data/downloaded/hard-hat-sample-w9zqx/train/images
+val: ./data/training-data/downloaded/hard-hat-sample-w9zqx/valid/images

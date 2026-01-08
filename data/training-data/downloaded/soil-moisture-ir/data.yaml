@@ -1,0 +1,16 @@
+names:
+- soil-moisture-1.0
+- soil-moisture-2.0
+- soil-moisture-3.0
+- soil-moisture-5.0
+- soil-moisture-8.2
+nc: 5
+roboflow:
+  license: CC BY 4.0
+  project: soil-moisture-ir
+  url: https://universe.roboflow.com/robotics-lab-1/soil-moisture-ir/dataset/1
+  version: 1
+  workspace: robotics-lab-1
+test: ../test/images
+train: ./data/training-data/downloaded/soil-moisture-ir/train/images
+val: ./data/training-data/downloaded/soil-moisture-ir/valid/images
