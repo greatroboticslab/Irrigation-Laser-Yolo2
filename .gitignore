@@ -41,6 +41,26 @@ results*.csv
 coco/
 coco128/
 VOC/
+data/training-data/downloaded/
+data/training-data/
+
+# Augmented and synthetic images (regenerated locally)
+*_aug*.jpg
+*_aug*.png
+*_aug*.txt
+synthetic_*.jpg
+synthetic_*.png
+synthetic_*.txt
+syn_*.jpg
+syn_*.png
+syn_*.txt
+
+# Generated plots and slide decks
+plots/
+
+# Training run outputs
+runs/
+logs/
 
 # MATLAB GitIgnore -----------------------------------------------------------------------------------------------------
 *.m~
