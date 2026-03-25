@@ -70,22 +70,6 @@ Output: `runs/fine-tuned/<dataset>/weights/best.pt`
 
 ---
 
-## Results — Best Validation mAP@0.5
-
-| Dataset | Run 1 | Run 2 | Fine-tune | Combined |
-|---------|-------|-------|-----------|----------|
-| soil-moisture-v4 | 0.9907 | 0.9896 | **0.9907** | — |
-| soil-moisture-v4-ir | 0.9834 | 0.9869 | **0.9903** | — |
-| soil-moisture-v4-uv | 0.9099 | **0.9950** | 0.9308 | — |
-| soil-moisture-ir | 0.7459 | failed | 0.7135 | **0.8699** |
-| soil-moisture-5sagf | 0.5518 | 0.5789 | 0.5537 | **0.8699** |
-| soil_moisture_september | 0.5693 | 0.4094 | 0.3238 | **0.9430** |
-| soil_moisture_stir_september | **0.4988** | 0.4184 | 0.4184 | — |
-
-> Merging datasets produced the largest gains: IR Combined +13.7%, v4+September +37.4%.
-
----
-
 ## Data Augmentation — `soil_moisture_stir_september`
 
 The stir probe dataset had only 56 images. An albumentations pipeline expanded it to **685 images**.
