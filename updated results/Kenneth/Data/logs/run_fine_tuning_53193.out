@@ -1,0 +1,96 @@
+Job started on c9.hamilton.cs.mtsu.edu at Fri Apr 10 17:17:41 CDT 2026
+CUDA_VISIBLE_DEVICES: 0
+Fri Apr 10 17:17:42 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 550.54.15              Driver Version: 550.54.15      CUDA Version: 12.4     |
+|-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A100 80GB PCIe          On  |   00000000:0B:00.0 Off |                    0 |
+| N/A   29C    P0             42W /  300W |       0MiB /  81920MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+                                                                                         
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI        PID   Type   Process name                              GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+Python: /projects/kp9e/Irrigation-Laser-Yolo2/venv/bin/python
+CUDA available: True
+Device count: 1
+Running fine_tuning.py...
+Working directory: /projects/kp9e/Irrigation-Laser-Yolo2
+Python: /projects/kp9e/Irrigation-Laser-Yolo2/venv/bin/python
+train.py exists: True
+Scanning baseline runs to find best starting weights ...
+  soil-moisture-5sagf: best mAP@0.5 = 0.5867
+  soil-moisture-ir: best mAP@0.5 = 0.8043
+  soil-moisture-v4: best mAP@0.5 = 0.7595
+  soil-moisture-v4-ir: best mAP@0.5 = 0.5497
+  soil-moisture-v4-uv: best mAP@0.5 = 0.6124
+  soil_moisture_september: best mAP@0.5 = 0.7157
+  soil_moisture_stir_september: best mAP@0.5 = 0.6834
+Selected weights : /projects/kp9e/Irrigation-Laser-Yolo2/runs/train/downloaded/soil-moisture-ir/weights/best.pt
+Source dataset   : soil-moisture-ir  (mAP@0.5 = 0.8043)
+Skipping soil-moisture-5sagf (component of a merged dataset or excluded)
+Skipping soil-moisture-ir (component of a merged dataset or excluded)
+Fine-tuning on: /projects/kp9e/Irrigation-Laser-Yolo2/data/training-data/downloaded/soil-moisture-ir-combined/data.yaml
+[34m[1mgithub: [0mskipping check (not a git repository), for updates see https://github.com/ultralytics/yolov5
+Return code: 0
+Skipping soil-moisture-v4 (component of a merged dataset or excluded)
+Fine-tuning on: /projects/kp9e/Irrigation-Laser-Yolo2/data/training-data/downloaded/soil-moisture-v4-ir/data.yaml
+[34m[1mgithub: [0mskipping check (not a git repository), for updates see https://github.com/ultralytics/yolov5
+Return code: 0
+Fine-tuning on: /projects/kp9e/Irrigation-Laser-Yolo2/data/training-data/downloaded/soil-moisture-v4-september-combined/data.yaml
+[34m[1mgithub: [0mskipping check (not a git repository), for updates see https://github.com/ultralytics/yolov5
+Return code: 0
+Fine-tuning on: /projects/kp9e/Irrigation-Laser-Yolo2/data/training-data/downloaded/soil-moisture-v4-uv/data.yaml
+[34m[1mgithub: [0mskipping check (not a git repository), for updates see https://github.com/ultralytics/yolov5
+Return code: 0
+Skipping soil_moisture_september (component of a merged dataset or excluded)
+Fine-tuning on: /projects/kp9e/Irrigation-Laser-Yolo2/data/training-data/downloaded/soil_moisture_stir_september/data.yaml
+[34m[1mgithub: [0mskipping check (not a git repository), for updates see https://github.com/ultralytics/yolov5
+Return code: 0
+Running analyze.py...
+soil-moisture-ir-combined: 0.995000
+soil-moisture-v4-ir: 0.986450
+soil-moisture-v4-september-combined: 0.953142
+soil-moisture-v4-uv: 0.846266
+soil_moisture_stir_september: 0.494018
+
+Summary saved to fine-tuned-results/summary.txt
+Running plot_results.py...
+Searching runs in : runs/fine-tuned
+Saving plots to   : fine-tuned-results
+
+Processing: soil-moisture-ir-combined
+  Best run: soil-moisture-ir-combined (mAP@0.5 = 0.9950)
+  Found 200 epochs, peak mAP@0.5 = 0.9950
+  Saved: fine-tuned-results/soil-moisture-ir-combined.png
+Processing: soil-moisture-v4-ir
+  Best run: soil-moisture-v4-ir (mAP@0.5 = 0.9869)
+  Found 200 epochs, peak mAP@0.5 = 0.9869
+  Saved: fine-tuned-results/soil-moisture-v4-ir.png
+Processing: soil-moisture-v4-september-combined
+  Best run: soil-moisture-v4-september-combined (mAP@0.5 = 0.9551)
+  Found 200 epochs, peak mAP@0.5 = 0.9551
+  Saved: fine-tuned-results/soil-moisture-v4-september-combined.png
+Processing: soil-moisture-v4-uv
+  Best run: soil-moisture-v4-uv (mAP@0.5 = 0.9121)
+  Found 200 epochs, peak mAP@0.5 = 0.9121
+  Saved: fine-tuned-results/soil-moisture-v4-uv.png
+Processing: soil_moisture_stir_september
+  Best run: soil_moisture_stir_september (mAP@0.5 = 0.7108)
+  Found 171 epochs, peak mAP@0.5 = 0.7108
+  Saved: fine-tuned-results/soil_moisture_stir_september.png
+
+Generating comparison chart...
+  Saved: fine-tuned-results/comparison.png
+
+Done. All plots saved to 'fine-tuned-results/'
+Job finished at Fri Apr 10 17:57:01 CDT 2026

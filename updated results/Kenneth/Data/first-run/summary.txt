@@ -1,0 +1,9 @@
+runs_root: runs/train
+
+soil-moisture-5sagf: 0.524036
+soil-moisture-ir: 0.762782
+soil-moisture-v4: 0.649590
+soil-moisture-v4-ir: 0.300944
+soil-moisture-v4-uv: 0.500334
+soil_moisture_september: 0.563460
+soil_moisture_stir_september: 0.446652

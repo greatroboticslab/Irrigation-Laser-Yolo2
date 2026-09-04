@@ -1,0 +1,8 @@
+# Vendored pip packages — install via requirements.txt instead of committing binaries.
+# cv2_pkg is a site-packages copy of opencv-python-headless + numpy (~200 MB).
+Code/cv2_pkg/
+
+# Model checkpoints and raw training imagery live on the cluster, not in git.
+Data/runs/**/weights/
+Data/data/training-data/
+Data/*.pt

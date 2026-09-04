@@ -1,0 +1,47 @@
+Job started on c9.hamilton.cs.mtsu.edu at Sat Apr 11 00:39:02 CDT 2026
+CUDA_VISIBLE_DEVICES: 0
+Sat Apr 11 00:39:02 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 550.54.15              Driver Version: 550.54.15      CUDA Version: 12.4     |
+|-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A100 80GB PCIe          On  |   00000000:0B:00.0 Off |                    0 |
+| N/A   29C    P0             41W /  300W |       0MiB /  81920MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+                                                                                         
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI        PID   Type   Process name                              GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+Python: /projects/kp9e/Irrigation-Laser-Yolo2/venv/bin/python
+CUDA available: True
+Device: NVIDIA A100 80GB PCIe
+Training on: /projects/kp9e/Irrigation-Laser-Yolo2/data/training-data/downloaded/soil_moisture_stir_september/data.yaml
+Starting weights: /projects/kp9e/Irrigation-Laser-Yolo2/runs/train/downloaded/soil-moisture-v4/weights/best.pt
+[34m[1mgithub: [0mskipping check (not a git repository), for updates see https://github.com/ultralytics/yolov5
+Training done at Sat Apr 11 00:53:29 CDT 2026
+Running analyze.py...
+soil_moisture_stir_september5: 0.487008
+
+Summary saved to stir-finetune-results/summary.txt
+Running plot_results.py...
+Searching runs in : runs/train/stir-finetune
+Saving plots to   : stir-finetune-results
+
+Processing: soil_moisture_stir_september5
+  Best run: soil_moisture_stir_september5 (mAP@0.5 = 0.6247)
+  Found 162 epochs, peak mAP@0.5 = 0.6247
+  Saved: stir-finetune-results/soil_moisture_stir_september5.png
+
+Generating comparison chart...
+  Saved: stir-finetune-results/comparison.png
+
+Done. All plots saved to 'stir-finetune-results/'
+Job finished at Sat Apr 11 00:53:31 CDT 2026

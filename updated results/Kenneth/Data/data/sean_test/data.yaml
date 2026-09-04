@@ -1,0 +1,13 @@
+train: ./data/sean_test/train/images
+val: ./data/sean_test/valid/images
+test: ./data/sean_test/test/images
+
+nc: 7
+names: ['2', '3', '4', '5', '6', '7', '8']
+
+roboflow:
+  workspace: soil-moisture
+  project: sean_test
+  version: 1
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/soil-moisture/sean_test/dataset/1

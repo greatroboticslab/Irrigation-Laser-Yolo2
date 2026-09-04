@@ -1,0 +1,13 @@
+train: ./data/LaserA/train/images
+val: ./data/LaserA/valid/images
+test: ./data/LaserA/test/images
+
+nc: 11
+names: ['Green Leaser-4.8', 'Green Leaser-5.0', 'Green Leaser-5.1', 'Green Leaser-5.3', 'Green Leaser-5.4', 'Green Leaser-5.5', 'Green Leaser-5.7', 'Green Leaser-6.0', 'Green Leaser-6.2', 'Green Leaser-6.6', 'Green Leaser-6.8']
+
+roboflow:
+  workspace: mtsu
+  project: type-a-soil-moisture-and-light
+  version: 2
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/mtsu/type-a-soil-moisture-and-light/dataset/2

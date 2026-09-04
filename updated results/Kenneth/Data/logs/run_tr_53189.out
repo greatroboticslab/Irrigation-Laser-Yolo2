@@ -1,0 +1,106 @@
+Job started on c9.hamilton.cs.mtsu.edu at Fri Apr 10 11:40:08 CDT 2026
+CUDA_VISIBLE_DEVICES: 0
+Fri Apr 10 11:40:08 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 550.54.15              Driver Version: 550.54.15      CUDA Version: 12.4     |
+|-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A100 80GB PCIe          On  |   00000000:0B:00.0 Off |                    0 |
+| N/A   29C    P0             42W /  300W |       0MiB /  81920MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+                                                                                         
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI        PID   Type   Process name                              GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+Python: /projects/kp9e/Irrigation-Laser-Yolo2/venv/bin/python
+CUDA available: True
+Device count: 1
+Running tr.py...
+Working directory: /projects/kp9e/Irrigation-Laser-Yolo2
+Python: /projects/kp9e/Irrigation-Laser-Yolo2/venv/bin/python
+train.py exists: True
+Training on: /projects/kp9e/Irrigation-Laser-Yolo2/data/training-data/downloaded/soil-moisture-5sagf/data.yaml
+[34m[1mgithub: [0mskipping check (not a git repository), for updates see https://github.com/ultralytics/yolov5
+Return code: 0
+Training on: /projects/kp9e/Irrigation-Laser-Yolo2/data/training-data/downloaded/soil-moisture-ir/data.yaml
+[34m[1mgithub: [0mskipping check (not a git repository), for updates see https://github.com/ultralytics/yolov5
+Return code: 0
+Training on: /projects/kp9e/Irrigation-Laser-Yolo2/data/training-data/downloaded/soil-moisture-v4/data.yaml
+  Using STIR augmentation hyp: /projects/kp9e/Irrigation-Laser-Yolo2/data/hyps/hyp.stir-soil.yaml
+[34m[1mgithub: [0mskipping check (not a git repository), for updates see https://github.com/ultralytics/yolov5
+Return code: 0
+Training on: /projects/kp9e/Irrigation-Laser-Yolo2/data/training-data/downloaded/soil-moisture-v4-ir/data.yaml
+  Using STIR augmentation hyp: /projects/kp9e/Irrigation-Laser-Yolo2/data/hyps/hyp.stir-soil.yaml
+[34m[1mgithub: [0mskipping check (not a git repository), for updates see https://github.com/ultralytics/yolov5
+Return code: 0
+Training on: /projects/kp9e/Irrigation-Laser-Yolo2/data/training-data/downloaded/soil-moisture-v4-uv/data.yaml
+  Using STIR augmentation hyp: /projects/kp9e/Irrigation-Laser-Yolo2/data/hyps/hyp.stir-soil.yaml
+[34m[1mgithub: [0mskipping check (not a git repository), for updates see https://github.com/ultralytics/yolov5
+Return code: 0
+Training on: /projects/kp9e/Irrigation-Laser-Yolo2/data/training-data/downloaded/soil_moisture_september/data.yaml
+[34m[1mgithub: [0mskipping check (not a git repository), for updates see https://github.com/ultralytics/yolov5
+Return code: 0
+Training on: /projects/kp9e/Irrigation-Laser-Yolo2/data/training-data/downloaded/soil_moisture_stir_september/data.yaml
+  Using STIR augmentation hyp: /projects/kp9e/Irrigation-Laser-Yolo2/data/hyps/hyp.stir-soil.yaml
+[34m[1mgithub: [0mskipping check (not a git repository), for updates see https://github.com/ultralytics/yolov5
+Return code: 0
+Running analyze.py...
+soil-moisture-5sagf: 0.524036
+soil-moisture-ir: 0.762782
+soil-moisture-v4: 0.649590
+soil-moisture-v4-ir: 0.300944
+soil-moisture-v4-uv: 0.500334
+soil_moisture_september: 0.563460
+soil_moisture_stir_september: 0.446652
+
+Summary saved to first-run/summary.txt
+Running plot_results.py...
+Searching runs in : runs/train
+Saving plots to   : first-run
+
+Processing: soil-moisture-ir
+  Best run: downloaded/soil-moisture-ir (mAP@0.5 = 0.8043)
+  Found 200 epochs, peak mAP@0.5 = 0.8043
+  Saved: first-run/soil-moisture-ir.png
+Processing: soil-moisture-v4
+  Best run: downloaded/soil-moisture-v4 (mAP@0.5 = 0.7595)
+  Found 200 epochs, peak mAP@0.5 = 0.7595
+  Saved: first-run/soil-moisture-v4.png
+Processing: soil-moisture-v4-ir
+  Best run: downloaded/soil-moisture-v4-ir (mAP@0.5 = 0.5497)
+  Found 200 epochs, peak mAP@0.5 = 0.5497
+  Saved: first-run/soil-moisture-v4-ir.png
+Processing: soil-moisture-v4-uv
+  Best run: downloaded/soil-moisture-v4-uv (mAP@0.5 = 0.6124)
+  Found 200 epochs, peak mAP@0.5 = 0.6124
+  Saved: first-run/soil-moisture-v4-uv.png
+Processing: soil-moisture-5sagf
+  Best run: downloaded/soil-moisture-5sagf (mAP@0.5 = 0.5867)
+  Found 200 epochs, peak mAP@0.5 = 0.5867
+  Saved: first-run/soil-moisture-5sagf.png
+Processing: soil_moisture_september
+  Best run: downloaded/soil_moisture_september (mAP@0.5 = 0.7157)
+  Found 200 epochs, peak mAP@0.5 = 0.7157
+  Saved: first-run/soil_moisture_september.png
+Processing: soil_moisture_stir_september
+  Best run: downloaded/soil_moisture_stir_september (mAP@0.5 = 0.6834)
+  Found 200 epochs, peak mAP@0.5 = 0.6834
+  Saved: first-run/soil_moisture_stir_september.png
+Processing: soil-moisture-ir-combined
+  No results found, skipping.
+Processing: soil-moisture-v4-september-combined
+  No results found, skipping.
+
+Generating comparison chart...
+  Saved: first-run/comparison.png
+
+Done. All plots saved to 'first-run/'
+Job finished at Fri Apr 10 12:25:37 CDT 2026

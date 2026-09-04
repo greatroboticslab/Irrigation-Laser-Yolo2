@@ -1,0 +1,13 @@
+train: ./data/LaserB/train/images
+val: ./data/LaserB/valid/images
+test: ./data/LaserB/test/images
+
+nc: 12
+names: ['Green Leaser-4.7', 'Green Leaser-4.8', 'Green Leaser-5.0', 'Green Leaser-5.2', 'Green Leaser-5.7', 'Green Leaser-5.9', 'Green Leaser-6.1', 'Green Leaser-6.2', 'Green Leaser-6.6', 'Green Leaser-6.7', 'Green Leaser-6.9', 'Green Leaser-7.0']
+
+roboflow:
+  workspace: mtsu
+  project: type-b-soil-moisture-and-light
+  version: 1
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/mtsu/type-b-soil-moisture-and-light/dataset/1

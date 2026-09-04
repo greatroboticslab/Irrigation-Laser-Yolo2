@@ -1,0 +1,13 @@
+train: ./data/training-data/downloaded/soil-moisture-a-b/train/images
+val: ./data/training-data/downloaded/soil-moisture-a-b/valid/images
+test: ./data/training-data/downloaded/soil-moisture-a-b/test/images
+
+nc: 18
+names: ['Green Leaser-4.7', 'Green Leaser-4.8', 'Green Leaser-5.0', 'Green Leaser-5.1', 'Green Leaser-5.2', 'Green Leaser-5.3', 'Green Leaser-5.4', 'Green Leaser-5.5', 'Green Leaser-5.7', 'Green Leaser-5.9', 'Green Leaser-6.0', 'Green Leaser-6.1', 'Green Leaser-6.2', 'Green Leaser-6.6', 'Green Leaser-6.7', 'Green Leaser-6.8', 'Green Leaser-6.9', 'Green Leaser-7.0']
+
+roboflow:
+  workspace: mtsu
+  project: soil-moisture-a-b
+  version: 1
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/mtsu/soil-moisture-a-b/dataset/1

@@ -1,0 +1,43 @@
+# YOLOv5 hyperparameters tuned for STIR soil moisture dataset
+# Overhead pot images — sensor probe detection
+# Stronger rotation/flip (overhead = rotationally symmetric)
+# Stronger HSV (LED color and lighting vary significantly)
+
+lr0: 0.01
+lrf: 0.1
+momentum: 0.937
+weight_decay: 0.0005
+warmup_epochs: 3.0
+warmup_momentum: 0.8
+warmup_bias_lr: 0.1
+box: 0.05
+cls: 0.3
+cls_pw: 1.0
+obj: 0.7
+obj_pw: 1.0
+iou_t: 0.20
+anchor_t: 4.0
+fl_gamma: 0.0
+
+# ── Augmentation ──────────────────────────────────────────────
+# Overhead images: free rotation and vertical flip are valid
+degrees: 45.0       # rotation (overhead = rotationally symmetric)
+flipud: 0.5         # vertical flip (valid for overhead shots)
+fliplr: 0.5         # horizontal flip
+
+# Lighting varies a lot between LED colors and exposure
+hsv_h: 0.02         # hue shift (LED colors span red→blue)
+hsv_s: 0.2          # saturation — reduced to preserve LED colour as class signal
+hsv_v: 0.3          # brightness (shadows, exposure changes)
+
+# Scale/position variation (sensor probe distance from camera)
+scale: 0.5          # zoom in/out
+translate: 0.2      # shift probe position
+
+shear: 5.0          # mild shear
+perspective: 0.0005 # mild perspective (camera tilt)
+
+# Composition augmentations
+mosaic: 0.0         # disabled — mosaic slices probe tip out of frame on small dataset
+mixup: 0.0          # disabled — too few images for meaningful mixup
+copy_paste: 0.0     # required by dataloaders.py — keep at 0 (no segmentation)

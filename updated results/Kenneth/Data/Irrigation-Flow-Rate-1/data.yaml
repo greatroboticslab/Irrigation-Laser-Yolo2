@@ -1,0 +1,14 @@
+names:
+- high_flow
+- low_flow
+- medium_flow
+nc: 3
+roboflow:
+  license: CC BY 4.0
+  project: irrigation-flow-rate
+  url: https://universe.roboflow.com/mtsu/irrigation-flow-rate/dataset/1
+  version: 1
+  workspace: mtsu
+test: ../test/images
+train: Irrigation-Flow-Rate-1/train/images
+val: Irrigation-Flow-Rate-1/valid/images

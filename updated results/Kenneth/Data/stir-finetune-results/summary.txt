@@ -1,0 +1,3 @@
+runs_root: runs/train/stir-finetune
+
+soil_moisture_stir_september5: 0.487008

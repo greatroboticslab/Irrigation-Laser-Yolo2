@@ -1,0 +1,7 @@
+runs_root: runs/fine-tuned
+
+soil-moisture-ir-combined: 0.995000
+soil-moisture-v4-ir: 0.986450
+soil-moisture-v4-september-combined: 0.953142
+soil-moisture-v4-uv: 0.846266
+soil_moisture_stir_september: 0.494018
