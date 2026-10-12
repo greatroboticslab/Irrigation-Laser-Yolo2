@@ -3,7 +3,7 @@ from roboflow import Roboflow
 
 # 1. Initialize with your API Key
 # You can find this in your Roboflow settings (https://app.roboflow.com/settings/api)
-rf = Roboflow(api_key="JvguSIcRS5w7c7RFtxlf")
+rf = Roboflow(api_key=os.environ["ROBOFLOW_API_KEY"])
 
 # 2. Access your workspace
 # If you leave it blank, it defaults to your primary workspace

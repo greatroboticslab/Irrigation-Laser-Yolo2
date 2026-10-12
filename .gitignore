@@ -43,6 +43,7 @@ coco128/
 VOC/
 data/training-data/downloaded/
 data/training-data/
+data/ablation_september/
 
 # Augmented and synthetic images (regenerated locally)
 *_aug*.jpg

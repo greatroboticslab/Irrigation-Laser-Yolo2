@@ -238,7 +238,9 @@ def resize_to_640(raw_bytes: bytes) -> bytes:
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
-    api_key = "AIzaSyAav0AcRFJMP6kDGgfblJWbzJu3d97taJM"
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        raise SystemExit("Set GEMINI_API_KEY to a Google AI Studio key before running.")
 
     client = genai.Client(api_key=api_key)
 

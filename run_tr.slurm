@@ -1,12 +1,11 @@
 #!/bin/bash
 #SBATCH --job-name=run_tr
-#SBATCH --partition=research
-#SBATCH --gres=gpu:2080Ti:1
+#SBATCH --partition=a100
+#SBATCH --gres=gpu:1
 #SBATCH --time=48:00:00
 #SBATCH --nodes=1
-#SBATCH --nodelist=c5,c7
 #SBATCH --cpus-per-task=8
-#SBATCH --mem=32G
+#SBATCH --mem=64G
 #SBATCH --output=/projects/kp9e/Irrigation-Laser-Yolo2/logs/run_tr_%j.out
 #SBATCH --error=/projects/kp9e/Irrigation-Laser-Yolo2/logs/run_tr_%j.err
 
@@ -18,6 +17,13 @@ mkdir -p /projects/kp9e/Irrigation-Laser-Yolo2/logs
 # Load CUDA module
 # ==================================================
 module load cuda/12.4
+export LD_LIBRARY_PATH=/usr/lib64:/opt/ohpc/pub/apps/cuda/12.4/lib64:$LD_LIBRARY_PATH
+
+# ==================================================
+# Git executable for gitpython (not in PATH on compute nodes by default)
+# ==================================================
+export GIT_PYTHON_GIT_EXECUTABLE=/usr/bin/git
+export GIT_PYTHON_REFRESH=quiet
 
 # ==================================================
 # GPU Info
@@ -30,6 +36,7 @@ nvidia-smi
 # ==================================================
 ENV_PATH="/projects/kp9e/Irrigation-Laser-Yolo2/venv"
 source $ENV_PATH/bin/activate
+export PYTHONPATH=/projects/kp9e/Irrigation-Laser-Yolo2/cv2_pkg:$ENV_PATH/lib64/python3.9/site-packages:$ENV_PATH/lib/python3.9/site-packages:$PYTHONPATH
 echo "Python: $(which python)"
 
 # ==================================================

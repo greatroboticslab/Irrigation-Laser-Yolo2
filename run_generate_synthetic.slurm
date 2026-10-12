@@ -1,18 +1,25 @@
 #!/bin/bash
 #SBATCH --job-name=gen_synthetic
-#SBATCH --partition=research
-#SBATCH --gres=gpu:2080Ti:1
-#SBATCH --time=12:00:00
+#SBATCH --partition=a100
+#SBATCH --gres=gpu:1
+#SBATCH --time=24:00:00
 #SBATCH --nodes=1
-#SBATCH --nodelist=c5,c7
 #SBATCH --cpus-per-task=8
-#SBATCH --mem=32G
+#SBATCH --mem=64G
 #SBATCH --output=/projects/kp9e/Irrigation-Laser-Yolo2/logs/gen_synthetic_%j.out
 #SBATCH --error=/projects/kp9e/Irrigation-Laser-Yolo2/logs/gen_synthetic_%j.err
 
 echo "Job started on $(hostname) at $(date)"
 
 mkdir -p /projects/kp9e/Irrigation-Laser-Yolo2/logs
+
+# ==================================================
+# Environment — required for CUDA and cv2 on cluster
+# ==================================================
+export LD_LIBRARY_PATH=/usr/lib64:$LD_LIBRARY_PATH
+export PYTHONPATH=/projects/kp9e/Irrigation-Laser-Yolo2/cv2_pkg:/projects/kp9e/Irrigation-Laser-Yolo2/venv/lib64/python3.9/site-packages:/projects/kp9e/Irrigation-Laser-Yolo2/venv/lib/python3.9/site-packages:$PYTHONPATH
+export GIT_PYTHON_GIT_EXECUTABLE=/usr/bin/git
+export HUGGING_FACE_HUB_TOKEN=your_token_here
 
 # ==================================================
 # Load CUDA module
@@ -33,9 +40,9 @@ source $ENV_PATH/bin/activate
 echo "Python: $(which python)"
 
 # ==================================================
-# Install diffusers dependencies if not present
+# Install / upgrade diffusers dependencies for FLUX.1-schnell
 # ==================================================
-pip install --quiet diffusers transformers accelerate opencv-python-headless
+pip install --quiet "diffusers==0.30.3" "transformers==4.44.2" "accelerate==0.33.0" sentencepiece protobuf opencv-python-headless
 
 # ==================================================
 # Verify CUDA is available
@@ -52,9 +59,9 @@ python generate_stir_synthetic.py \
     --n-train 50 \
     --n-valid 15 \
     --n-test  10 \
-    --model   runwayml/stable-diffusion-v1-5 \
-    --steps   30 \
-    --guidance 7.5 \
-    --seed    42
+    --model   black-forest-labs/FLUX.1-schnell \
+    --steps   4 \
+    --seed    42 \
+    --require-gpu
 
 echo "Job finished at $(date)"

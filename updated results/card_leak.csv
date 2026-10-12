@@ -1,0 +1,5 @@
+dataset,run,mAP50_original,mAP50_cards_masked,delta
+soil-moisture-5sagf,first-run,0.5826,0.5527,-0.0299
+soil-moisture-ir,first-run,0.7878,0.7297,-0.0581
+soil-moisture-ir-combined,merged,0.5683,0.543,-0.0253
+soil-moisture-ir-combined,fine-tuned,0.995,0.995,0.0

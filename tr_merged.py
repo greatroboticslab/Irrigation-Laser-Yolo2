@@ -21,9 +21,9 @@ for yaml_path in DATASETS:
         PYTHON, TRAIN_SCRIPT,
         "--img", "640",
         "--epochs", "200",
-        "--batch-size", "2",    # reduced further for larger merged datasets on 2080Ti
+        "--batch-size", "16",   # yolov5s on A100; merged datasets are larger so 16 is safe
         "--data", yaml_path,
-        "--weights", "yolov5m.pt",
+        "--weights", "yolov5s.pt",
         "--device", "",
         "--optimizer", "AdamW",
         "--cos-lr",
