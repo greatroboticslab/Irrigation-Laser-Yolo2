@@ -22,6 +22,27 @@ unzip paper_weights.zip    # -> runs/train/downloaded/, runs/train/merged/, runs
 
 ---
 
+## Repository layout
+
+```
+├── scripts/            project code, run from the repo root (each folder has a README)
+│   ├── data_prep/      download, merge, augment, ablate; burst groups and CV folds
+│   ├── training/       three-stage protocol and follow-up experiments
+│   ├── evaluation/     calibration, cross-validation scoring, leakage checks
+│   ├── figures/        paper figures and slide decks
+│   └── synthetic/      synthetic-image generators (unused in reported results)
+├── slurm/              cluster batch jobs that call scripts/
+├── results/            result tables and figures behind the paper
+├── data/hyps/          hyperparameter files, incl. hyp.stir-soil.yaml and hyp.stir-finetune.yaml
+├── archive/            frozen April 2026 snapshot (provenance only)
+├── legacy/             superseded drivers and an early side experiment
+└── train.py, val.py, detect.py, models/, utils/, …   vendored Ultralytics YOLOv5
+```
+
+All scripts are run from the repository root, e.g. `python scripts/training/tr.py`. Cluster jobs are submitted the same way: `sbatch slurm/run_tr.slurm`.
+
+---
+
 ## Datasets
 
 All collections come from [Roboflow Universe](https://universe.roboflow.com) (workspace `robotics-lab-1`, CC BY 4.0). The paper uses role-based display names:
@@ -40,11 +61,11 @@ All collections come from [Roboflow Universe](https://universe.roboflow.com) (wo
 
 `soil-moisture-v3` (87 raw voltage classes) is excluded.
 
-**Class order.** Roboflow exports names alphabetically, so in the 11-class sets index 2 is level 10. `merge_datasets.py` remaps indices before pooling.
+**Class order.** Roboflow exports names alphabetically, so in the 11-class sets index 2 is level 10. `scripts/data_prep/merge_datasets.py` remaps indices before pooling.
 
 **Stir-probe build.** The 56 original photographs were expanded offline in two passes. Each split was expanded only from its own originals:
 
-| Split | Originals | Pass 1 (`augment_stir_september.py`) | Pass 2 (`augment_stir_dataset.py`) | Total |
+| Split | Originals | Pass 1 (`scripts/data_prep/augment_stir_september.py`) | Pass 2 (`scripts/data_prep/augment_stir_dataset.py`) | Total |
 |---|---|---|---|---|
 | train | 39 | 13 copies each | 8 copies each | 858 |
 | valid | 12 | 8 | 8 | 204 |
@@ -62,9 +83,9 @@ All runs use YOLOv5s from COCO weights (`yolov5s.pt`), image size 640, AdamW, co
 
 | Stage | Script / job | What it does | Output |
 |---|---|---|---|
-| 1. Baselines | `tr.py` / `run_tr.slurm` | Trains each dataset independently from COCO | `runs/train/downloaded/<ds>/` |
-| 2. Pooling | `merge_datasets.py`, `tr_merged.py` / `run_tr_merged.slurm` | Trains the two label-compatible pools | `runs/train/merged/<ds>/` |
-| 3. Fine-tuning | `fine_tuning.py` / `run_fine_tuning.slurm` | Fine-tunes five targets from the strongest Stage-1 checkpoint, selected automatically. That checkpoint is **IR-Pot-Background (`soil-moisture-ir`, mAP@0.5 = 0.804)** | `runs/fine-tuned/<ds>/` |
+| 1. Baselines | `scripts/training/tr.py` / `slurm/run_tr.slurm` | Trains each dataset independently from COCO | `runs/train/downloaded/<ds>/` |
+| 2. Pooling | `scripts/data_prep/merge_datasets.py`, `scripts/training/tr_merged.py` / `slurm/run_tr_merged.slurm` | Trains the two label-compatible pools | `runs/train/merged/<ds>/` |
+| 3. Fine-tuning | `scripts/training/fine_tuning.py` / `slurm/run_fine_tuning.slurm` | Fine-tunes five targets from the strongest Stage-1 checkpoint, selected automatically. That checkpoint is **IR-Pot-Background (`soil-moisture-ir`, mAP@0.5 = 0.804)** | `runs/fine-tuned/<ds>/` |
 
 The Stage-3 targets are IR-Soil-Only, UV-Soil-Only-Target, Mixed Color and Background, IR-Combined and UV-Combined. A further stir-probe run (`stir5`, `runs/train/stir-finetune/`) was trained from the Stage-1 `soil-moisture-v4` checkpoint with `hyp.stir-soil.yaml`.
 
@@ -91,12 +112,12 @@ These are peak-epoch values read from the validation log, and for the stir-probe
 
 | Analysis | Script(s) | Result files |
 |---|---|---|
-| Loss-curve overfitting diagnostic | `make_overfitting_figure.py`, `make_training_curves_figure.py` | `updated results/overfitting_curves.png`, `training_curves.*` |
-| Post-training calibration (confident-error test) | `eval_calibration.py` | `updated results/posthoc_calibration*.{csv,png}` |
-| Stir-probe test split | `val.py` | `updated results/stir_test_scores.csv` |
-| Capture-burst grouping and leakage | `build_cv_groups.py`, `build_cv_folds.py`, `tr_cv.py` / `run_cv_v4uv.slurm` | `runs/cv/*_groups.csv`, `*_folds.csv` |
-| **Stir-probe grouped 5-fold CV** | `build_stir_cv.py`, `tr_stir_cv.py`, `eval_stir_cv.py` / `run_stir_cv.slurm` | `updated results/stir_cv_{summary,oof,analysis}.csv` |
-| Laser / overlay / card leakage ablations | `laser_ablation_dataset.py`, `build_nolaser_datasets.py`, `tr_threearm.py` / `run_threearm.slurm`, `eval_laser_dependence.py`, `eval_overlay_leak.py`, `eval_card_leak.py` | `updated results/threearm_summary.csv`, `laser_dependence.csv`, `overlay_leak.csv`, `card_leak.csv`, `LASER_ABLATION_RESULTS.md` |
+| Loss-curve overfitting diagnostic | `scripts/figures/make_overfitting_figure.py`, `scripts/figures/make_training_curves_figure.py` | `results/overfitting_curves.png`, `training_curves.*` |
+| Post-training calibration (confident-error test) | `scripts/evaluation/eval_calibration.py` | `results/posthoc_calibration*.{csv,png}` |
+| Stir-probe test split | `val.py` | `results/stir_test_scores.csv` |
+| Capture-burst grouping and leakage | `scripts/data_prep/build_cv_groups.py`, `scripts/data_prep/build_cv_folds.py`, `scripts/training/tr_cv.py` / `slurm/run_cv_v4uv.slurm` | `runs/cv/*_groups.csv`, `*_folds.csv` |
+| **Stir-probe grouped 5-fold CV** | `scripts/data_prep/build_stir_cv.py`, `scripts/training/tr_stir_cv.py`, `scripts/evaluation/eval_stir_cv.py` / `slurm/run_stir_cv.slurm` | `results/stir_cv_{summary,oof,analysis}.csv` |
+| Laser / overlay / card leakage ablations | `scripts/data_prep/laser_ablation_dataset.py`, `scripts/data_prep/build_nolaser_datasets.py`, `scripts/training/tr_threearm.py` / `slurm/run_threearm.slurm`, `scripts/evaluation/eval_laser_dependence.py`, `scripts/evaluation/eval_overlay_leak.py`, `scripts/evaluation/eval_card_leak.py` | `results/threearm_summary.csv`, `laser_dependence.csv`, `overlay_leak.csv`, `card_leak.csv`, `LASER_ABLATION_RESULTS.md` |
 
 **Findings in brief**
 
@@ -110,14 +131,14 @@ These are peak-epoch values read from the validation log, and for the stir-probe
 Reproduce the CV on the cluster:
 
 ```bash
-sbatch run_stir_cv.slurm   # STIR_CV_SEEDS=0 sbatch run_stir_cv.slurm for a 10-run pilot
+sbatch slurm/run_stir_cv.slurm   # STIR_CV_SEEDS=0 sbatch slurm/run_stir_cv.slurm for a 10-run pilot
 ```
 
 ---
 
 ## Synthetic data
 
-`generate_synthetic_stir.py` (Imagen 4 via the Gemini API) and `generate_stir_synthetic.py` (Stable Diffusion 1.5, `run_generate_synthetic.slurm`) generate labelled synthetic stir-probe frames. **No synthetic frames are in any training set behind the reported results.** Their bounding boxes come from per-class spatial priors rather than detection, so they are labels by assumption.
+`scripts/synthetic/generate_synthetic_stir.py` (Imagen 4 via the Gemini API) and `scripts/synthetic/generate_stir_synthetic.py` (FLUX.1-schnell, `slurm/run_generate_synthetic_gpu.slurm`) generate labelled synthetic stir-probe frames. **No synthetic frames are in any training set behind the reported results.** Their bounding boxes come from per-class spatial priors rather than detection, so they are labels by assumption.
 
 ---
 
@@ -126,9 +147,9 @@ sbatch run_stir_cv.slurm   # STIR_CV_SEEDS=0 sbatch run_stir_cv.slurm for a 10-r
 No keys are stored in the code. Set them in the environment before running:
 
 ```bash
-export ROBOFLOW_API_KEY=...   # download.py, main.py
-export GEMINI_API_KEY=...     # generate_synthetic_stir.py
-export HUGGING_FACE_HUB_TOKEN=...   # run_generate_synthetic.slurm
+export ROBOFLOW_API_KEY=...   # scripts/data_prep/download.py, legacy/irrigation_flow_rate/main.py
+export GEMINI_API_KEY=...     # scripts/synthetic/generate_synthetic_stir.py
+export HUGGING_FACE_HUB_TOKEN=...   # slurm/run_generate_synthetic.slurm
 ```
 
 ---
