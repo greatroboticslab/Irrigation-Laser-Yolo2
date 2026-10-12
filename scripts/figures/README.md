@@ -5,6 +5,7 @@ Figures for the paper and slide decks. Paper figures go to `results/ieee/IEEE_La
 | Script | Produces |
 |---|---|
 | `make_overfitting_figure.py` | Train vs validation classification loss (paper Fig. 4) |
+| `make_best_map_figure.py` | Best-mAP@0.5 bars, Stage 1 (paper Fig. 5) and Stage 3 (paper Fig. 6), drawn at column width |
 | `make_training_curves_figure.py` | Validation mAP curves for the reported runs |
 | `make_threearm_figure.py` | Three-arm laser retrain bars (paper Fig. 8) |
 | `make_confusion_figure.py` | Count-based confusion matrix for the IR-Combined model |

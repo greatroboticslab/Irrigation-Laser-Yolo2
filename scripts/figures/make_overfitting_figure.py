@@ -94,6 +94,15 @@ def read_curve(path):
     return cols
 
 
+# The figure is drawn at its printed size (IEEE single column, 3.5 in) so that
+# font sizes here are the sizes on the page. An earlier 11 in version was scaled
+# to a third by \includegraphics[width=\columnwidth] and printed at about 2 pt.
+FIG_W, FIG_H = 3.5, 4.1
+FS = 7      # titles and axis labels, pt
+FS_TICK = 6.5
+FS_LEG = 6
+
+
 def panel(ax, base_dir, datasets, metric, title, ylabel, mark_min):
     for ds in datasets:
         path = base_dir / ds / "results.csv"
@@ -106,34 +115,41 @@ def panel(ax, base_dir, datasets, metric, title, ylabel, mark_min):
         epochs, ys = cols["epoch"], cols[metric]
         emph = ds == EMPHASIS
         ax.plot(epochs, ys, color=COLORS.get(ds, "#333333"),
-                lw=2.2 if emph else 1.1, alpha=1.0 if emph else 0.85,
+                lw=1.4 if emph else 0.6, alpha=1.0 if emph else 0.85,
                 zorder=4 if emph else 2, label=NAME_MAP.get(ds, ds))
         if mark_min and len(ys) > WARMUP:
             tail = ys[WARMUP:]
             mn = min(tail)
             mn_ep = ys.index(mn)
             ax.plot([mn_ep], [mn], "v", color=COLORS.get(ds, "#333333"),
-                    ms=6 if emph else 4, mec="white", mew=0.8, zorder=5)
+                    ms=3.5 if emph else 2.5, mec="white", mew=0.4, zorder=5)
 
-    ax.set_title(title, fontsize=10, pad=6)
-    ax.set_xlabel("Epoch", fontsize=9)
-    ax.set_ylabel(ylabel, fontsize=9)
+    if title:
+        ax.set_title(title, fontsize=FS, pad=3, fontweight="bold")
+    if ylabel:
+        ax.set_ylabel(ylabel, fontsize=FS, labelpad=1)
     ax.set_yscale("log")
-    ax.grid(alpha=0.25, lw=0.5, which="both")
-    ax.tick_params(labelsize=8)
+    ax.grid(alpha=0.25, lw=0.4, which="both")
+    ax.tick_params(labelsize=FS_TICK, pad=1.5, length=2)
+    for sp in ax.spines.values():
+        sp.set_linewidth(0.5)
 
 
 def main():
-    fig, axes = plt.subplots(2, 2, figsize=(11, 7.5), sharex=True)
+    plt.rcParams.update({"font.family": "serif"})
+    fig, axes = plt.subplots(2, 2, figsize=(FIG_W, FIG_H), sharex=True)
 
     panel(axes[0][0], STAGE1_DIR, STAGE1, "val/cls_loss",
-          "Stage 1: validation classification loss", "val cls loss (log)", True)
+          "Stage 1", "Validation cls loss", True)
     panel(axes[0][1], STAGE3_DIR, STAGE3, "val/cls_loss",
-          "Stage 3: validation classification loss", "val cls loss (log)", True)
+          "Stage 3", None, True)
     panel(axes[1][0], STAGE1_DIR, STAGE1, "train/cls_loss",
-          "Stage 1: training classification loss", "train cls loss (log)", False)
+          None, "Training cls loss", False)
     panel(axes[1][1], STAGE3_DIR, STAGE3, "train/cls_loss",
-          "Stage 3: training classification loss", "train cls loss (log)", False)
+          None, None, False)
+    for ax in axes[1]:
+        ax.set_xlabel("Epoch", fontsize=FS, labelpad=1)
+        ax.set_xticks([0, 50, 100, 150, 200])
 
     # The first few dozen epochs throw validation-loss spikes two to four orders
     # of magnitude above the settled range -- the detector is still predicting
@@ -141,26 +157,19 @@ def main():
     # outside the window the diagnostic uses anyway.
     axes[0][0].set_ylim(0.008, 0.5)
     axes[0][1].set_ylim(0.0015, 0.30)
-    axes[0][0].legend(fontsize=7, loc="upper left", framealpha=0.92, ncol=2)
-    axes[0][1].legend(fontsize=7, loc="upper left", framealpha=0.92, ncol=2)
 
-    for ax in axes[0]:
-        ax.annotate("v = lowest validation loss after epoch 50",
-                    xy=(0.985, 0.04), xycoords="axes fraction",
-                    ha="right", va="bottom", fontsize=7, color="#444444")
-
-    fig.suptitle("Overfitting diagnostic: only Mixed Color and Background turns upward",
-                 fontsize=11.5, y=0.985)
-    fig.text(0.5, 0.012,
-             "Training loss is logged on augmented batches and validation loss on clean images, so the vertical offset between\n"
-             "rows is not a generalization gap; the evidence is the shape of each curve. Where validation shares capture bursts\n"
-             "with training, this test is blind by construction. Warm-up spikes above the panel range are clipped.",
-             ha="center", fontsize=7, color="#444444", linespacing=1.5)
-    fig.tight_layout(rect=(0, 0.075, 1, 0.962))
+    # One legend per column, under the panels, so no curve is hidden.
+    fig.tight_layout(rect=(0, 0.2, 1, 1), h_pad=0.4, w_pad=0.6)
+    for col, x in ((0, axes[1][0]), (1, axes[1][1])):
+        h, l = x.get_legend_handles_labels()
+        box = x.get_position()
+        fig.legend(h, l, loc="upper left", bbox_to_anchor=(box.x0 - 0.06, 0.19),
+                   fontsize=FS_LEG, frameon=False, handlelength=1.4,
+                   handletextpad=0.4, labelspacing=0.25, borderaxespad=0)
 
     for out in PAPER_OUT + REVIEW_OUT:
         out.parent.mkdir(parents=True, exist_ok=True)
-        fig.savefig(out, dpi=200)
+        fig.savefig(out, dpi=300)
         print(f"wrote {out}")
 
 
