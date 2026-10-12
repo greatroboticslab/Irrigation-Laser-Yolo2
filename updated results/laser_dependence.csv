@@ -1,0 +1,13 @@
+dataset,run,mAP50_with_laser,mAP50_laser_removed,mAP50_sham_control,delta_laser_removed,delta_sham
+soil-moisture-5sagf,first-run,0.5826,0.0443,0.5614,-0.5383,-0.0212
+soil-moisture-ir,first-run,0.7878,0.3207,0.7731,-0.4671,-0.0147
+soil-moisture-v4,first-run,0.7595,0.2901,0.7317,-0.4694,-0.0278
+soil-moisture-v4-uv,first-run,0.5571,0.0198,0.4816,-0.5373,-0.0755
+soil_moisture_september,first-run,0.5135,0.4519,0.3741,-0.0616,-0.1393
+soil_moisture_stir_september,first-run,0.6196,0.4531,0.6197,-0.1666,0.0001
+soil-moisture-ir-combined,merged,0.5683,0.2277,0.5631,-0.3406,-0.0052
+soil-moisture-v4-september-combined,merged,0.9303,0.4129,0.9395,-0.5174,0.0093
+soil-moisture-ir-combined,fine-tuned,0.995,0.2337,0.995,-0.7613,0.0
+soil-moisture-v4-september-combined,fine-tuned,0.9546,0.4298,0.9536,-0.5248,-0.001
+soil-moisture-v4-uv,fine-tuned,0.8826,0.0241,0.8816,-0.8585,-0.0011
+soil_moisture_stir_september,fine-tuned,0.6686,0.4367,0.6595,-0.232,-0.0092

@@ -1,2 +1,7 @@
 # this drop notebooks from GitHub language stats
 *.ipynb linguist-vendored
+
+# Scripts that run on the Linux cluster must keep LF endings. Checked out on
+# Windows, CRLF would reach the compute node and bash fails on the stray \r.
+*.slurm text eol=lf
+*.sh    text eol=lf

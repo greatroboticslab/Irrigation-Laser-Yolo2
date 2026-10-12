@@ -1,0 +1,9 @@
+stage,checkpoint,checkpoint_epoch,split,images,originals,P,R,mAP50,mAP50_95
+S1,best.pt,133,valid,204,12,0.614,0.528,0.620,0.243
+S1,best.pt,133,test,95,5,0.474,0.578,0.590,0.232
+S1,last.pt,199,valid,204,12,0.474,0.518,0.427,0.155
+S1,last.pt,199,test,95,5,0.483,0.611,0.577,0.243
+S3,best.pt,70,valid,204,12,0.470,0.613,0.669,0.359
+S3,best.pt,70,test,95,5,0.544,0.587,0.552,0.261
+S3,last.pt,170,valid,204,12,0.422,0.354,0.477,0.240
+S3,last.pt,170,test,95,5,0.744,0.598,0.540,0.271

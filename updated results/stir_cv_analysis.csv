@@ -1,0 +1,15 @@
+metric,arm,epoch,value,note
+oof_acc_originals,full,99,0.833,56 originals x 3 seeds; burst-bootstrap 95% CI 0.722-0.933
+oof_acc_originals_fold_sd,full,99,0.165,folds 0.611/1.000/0.788/1.000/0.788
+oof_acc_originals,freeze,99,0.310,folds 0.278/0.364/0.303/0.364/0.242
+acc_level_1,full,99,0.500,8 originals; errors mostly 1->8
+acc_level_10,full,99,0.933,20 originals
+acc_level_3,full,99,0.806,12 originals; errors 3->10
+acc_level_7,full,99,0.792,8 originals
+acc_level_8,full,99,1.000,8 originals
+err_conf_gt90_originals,full,99,0.000,0 of 28 original errors
+err_conf_gt90_frames,full,99,0.016,all held-out frames
+mean_conf_correct_frames,full,99,0.82,
+mean_conf_wrong_frames,full,99,0.58,
+ece_frames,full,99,0.063,10 bins
+ece_frames,freeze,99,0.351,

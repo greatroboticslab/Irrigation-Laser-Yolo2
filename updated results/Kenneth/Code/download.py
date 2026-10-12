@@ -2,7 +2,7 @@ import os
 from roboflow import Roboflow
 
 # 1. Initialize with your API Key
-rf = Roboflow(api_key="Cw6CEN9V8wqQZ1if6DiA")
+rf = Roboflow(api_key=os.environ["ROBOFLOW_API_KEY"])
 
 # 2. Define workspaces to download from
 workspaces_to_fetch = ["robotics-lab-1", "mtsu"]

@@ -1,8 +1,9 @@
+import os
 import torch
 from ultralytics import YOLO
 
 from roboflow import Roboflow
-rf = Roboflow(api_key="tnmtibY8WgTiWt4wjddx")
+rf = Roboflow(api_key=os.environ["ROBOFLOW_API_KEY"])
 project = rf.workspace("mtsu").project("irrigation-flow-rate")
 dataset = project.version(1).download("yolov5")
 
