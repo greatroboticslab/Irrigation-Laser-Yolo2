@@ -276,3 +276,6 @@ com_crashlytics_export_strings.xml
 crashlytics.properties
 crashlytics-build.properties
 fabric.properties
+
+# Local compatibility link to the renamed results folder
+/updated results
