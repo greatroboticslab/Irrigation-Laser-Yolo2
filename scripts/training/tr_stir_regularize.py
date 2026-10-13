@@ -16,6 +16,8 @@ changes only what its name says:
   ls_wd      both
   ls_wd_e50  both, 50-epoch schedule (cosine reaches its floor at epoch 50)
   ls_wd_lr   both, lr0 0.0003 instead of 0.001
+  ls_wd_lr_e60, ls_wd_lr_e100   ls_wd_lr on a 60- or 100-epoch schedule
+  ls2_wd_lr_e100                the same at 100 epochs with label smoothing 0.2
 
 Patience is off and every run trains its full budget, so the loss curves show
 whether the turn-up is gone rather than being cut off by early stopping.
@@ -64,6 +66,12 @@ ARMS = {
     "ls_wd":     ({"weight_decay": 0.05},                 0.1, 200),
     "ls_wd_e50": ({"weight_decay": 0.05},                 0.1, 50),
     "ls_wd_lr":  ({"weight_decay": 0.05, "lr0": 0.0003},  0.1, 200),
+    # Round 2. Round 1 (2026-10-12): weight decay alone does nothing; label
+    # smoothing halves the final val loss; ls_wd_lr stays flat to about epoch 90
+    # and then climbs, so keep its recipe and end the cosine schedule earlier.
+    "ls_wd_lr_e60":   ({"weight_decay": 0.05, "lr0": 0.0003}, 0.1, 60),
+    "ls_wd_lr_e100":  ({"weight_decay": 0.05, "lr0": 0.0003}, 0.1, 100),
+    "ls2_wd_lr_e100": ({"weight_decay": 0.05, "lr0": 0.0003}, 0.2, 100),
 }
 SELECTED = [x.strip() for x in os.environ.get("STIR_REG_ARMS", ",".join(ARMS)).split(",") if x.strip()]
 SEEDS = [int(x) for x in os.environ.get("STIR_REG_SEEDS", "0,1,2").split(",") if x.strip()]

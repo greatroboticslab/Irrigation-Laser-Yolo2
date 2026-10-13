@@ -21,6 +21,8 @@
 # resubmitted. Disk: ~40 stripped checkpoints x 14 MB per run, about 8 GB total.
 #
 # Pilot first if you like:  STIR_REG_SEEDS=0 sbatch slurm/run_stir_regularize.slurm
+# Round 2 only:  STIR_REG_ARMS=ls_wd_lr_e60,ls_wd_lr_e100,ls2_wd_lr_e100 sbatch slurm/run_stir_regularize.slurm
+# (scoring always rescores every run under runs/stir_reg, round 1 included)
 
 echo "Job started on $(hostname) at $(date)"
 mkdir -p /projects/kp9e/Irrigation-Laser-Yolo2/logs

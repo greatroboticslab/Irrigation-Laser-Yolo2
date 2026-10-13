@@ -162,7 +162,10 @@ def main():
     for arm, rs in by_arm.items():
         mean = {k: statistics.mean(r[k] for r in rs) for k in keys}
         sd = {k: statistics.stdev(r[k] for r in rs) if len(rs) > 1 else 0.0 for k in keys}
-        ok = mean["final_min"] <= RATIO_MAX and mean["map_peak"] - mean["map_final"] <= MAP_DROP_MAX
+        # A run with one checkpoint (the paper's, last.pt only) has final/min = 1
+        # by construction, so it cannot pass or fail.
+        ok = (mean["final_min"] <= RATIO_MAX and mean["map_peak"] - mean["map_final"] <= MAP_DROP_MAX
+              if rs[0]["n_ckpt"] > 1 else "n/a")
         per_arm.append({"arm": arm, "seed": f"mean of {len(rs)}", "n_ckpt": rs[0]["n_ckpt"],
                         **mean, **{f"{k}_sd": sd[k] for k in keys},
                         "no_overfit": ok})
