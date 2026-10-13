@@ -15,6 +15,7 @@ sbatch slurm/run_tr.slurm            # submit from the project root
 | `run_tr_ablation.slurm` | Four-condition laser ablation |
 | `run_cv_v4uv.slurm` | Burst groups, folds and cross-burst CV (v4 family; set `CV_DATASET`) |
 | `run_stir_cv.slurm` | Stir-probe grouped CV and out-of-fold scoring |
+| `run_stir_regularize.slurm` | Stage 3 stir regularisation sweep and rescoring |
 | `run_generate_synthetic*.slurm`, `run_stir_synthetic.slurm` | Synthetic generation and its follow-up training |
 | `check_python.slurm`, `test_cuda.slurm` | Environment checks |
 
