@@ -19,6 +19,16 @@ changes only what its name says:
   ls_wd_lr_e60, ls_wd_lr_e100   ls_wd_lr on a 60- or 100-epoch schedule
   ls2_wd_lr_e100                the same at 100 epochs with label smoothing 0.2
 
+Stage 1 arms (names starting s1_) retrain the Stage 1 Mixed Color run the same
+way: COCO init (yolov5s.pt) and data/hyps/hyp.stir-soil.yaml, which is that run's
+hyp.yaml, with AdamW at lr0 0.01 -- about ten times the usual AdamW rate:
+
+  s1_ls_wd            label smoothing 0.1 + weight_decay 0.05, 200 epochs
+  s1_ls_wd_lr         both + lr0 0.001, 200 epochs
+  s1_ls_wd_lr_e100    the same on a 100-epoch schedule
+  s1_ls_wd_lr_e60     the same on a 60-epoch schedule (the Stage 3 winner's length)
+  s1_ls_wd_lr3_e100   both + lr0 0.003, 100 epochs
+
 Patience is off and every run trains its full budget, so the loss curves show
 whether the turn-up is gone rather than being cut off by early stopping.
 Results go to runs/stir_reg/; nothing else under runs/ is touched.
@@ -56,6 +66,9 @@ DATA = os.path.join(PROJECT_DIR, "data", "training-data", "downloaded",
                     "soil_moisture_stir_september", "data.yaml")
 INIT = os.path.join(PROJECT_DIR, "runs", "train", "downloaded", "soil-moisture-ir", "weights", "best.pt")
 BASE_HYP = os.path.join(PROJECT_DIR, "data", "hyps", "hyp.stir-finetune.yaml")
+# Stage 1: the paper's Stage 1 Mixed Color run (runs/train/downloaded/soil_moisture_stir_september)
+S1_INIT = os.path.join(PROJECT_DIR, "yolov5s.pt")
+S1_HYP = os.path.join(PROJECT_DIR, "data", "hyps", "hyp.stir-soil.yaml")
 PROJECT_OUT = "runs/stir_reg"
 HYP_DIR = os.path.join(PROJECT_OUT, "hyps")
 
@@ -72,13 +85,24 @@ ARMS = {
     "ls_wd_lr_e60":   ({"weight_decay": 0.05, "lr0": 0.0003}, 0.1, 60),
     "ls_wd_lr_e100":  ({"weight_decay": 0.05, "lr0": 0.0003}, 0.1, 100),
     "ls2_wd_lr_e100": ({"weight_decay": 0.05, "lr0": 0.0003}, 0.2, 100),
+    # Stage 1 (COCO init, hyp.stir-soil.yaml base); see the docstring.
+    "s1_ls_wd":          ({"weight_decay": 0.05},                0.1, 200),
+    "s1_ls_wd_lr":       ({"weight_decay": 0.05, "lr0": 0.001},  0.1, 200),
+    "s1_ls_wd_lr_e100":  ({"weight_decay": 0.05, "lr0": 0.001},  0.1, 100),
+    "s1_ls_wd_lr_e60":   ({"weight_decay": 0.05, "lr0": 0.001},  0.1, 60),
+    "s1_ls_wd_lr3_e100": ({"weight_decay": 0.05, "lr0": 0.003},  0.1, 100),
 }
 SELECTED = [x.strip() for x in os.environ.get("STIR_REG_ARMS", ",".join(ARMS)).split(",") if x.strip()]
 SEEDS = [int(x) for x in os.environ.get("STIR_REG_SEEDS", "0,1,2").split(",") if x.strip()]
 
 
+def stage_files(arm):
+    """(init weights, base hyp) for an arm's stage."""
+    return (S1_INIT, S1_HYP) if arm.startswith("s1_") else (INIT, BASE_HYP)
+
+
 def hyp_for(arm):
-    with open(BASE_HYP) as f:
+    with open(stage_files(arm)[1]) as f:
         hyp = yaml.safe_load(f)
     hyp.update(ARMS[arm][0])
     os.makedirs(HYP_DIR, exist_ok=True)
@@ -100,7 +124,7 @@ def train(arm, seed):
         "--epochs", str(epochs),
         "--batch-size", "32",
         "--data", DATA,
-        "--weights", INIT,
+        "--weights", stage_files(arm)[0],
         "--hyp", hyp_for(arm),
         "--device", "",
         "--optimizer", "AdamW",
@@ -125,7 +149,8 @@ def main():
     unknown = [a for a in SELECTED if a not in ARMS]
     if unknown:
         sys.exit(f"ERROR: unknown arms {unknown}; choose from {list(ARMS)}")
-    for path in (DATA, INIT, BASE_HYP):
+    needed = {DATA} | {p for a in SELECTED for p in stage_files(a)}
+    for path in sorted(needed):
         if not os.path.isfile(path):
             sys.exit(f"ERROR: {path} not found")
     for arm in SELECTED:

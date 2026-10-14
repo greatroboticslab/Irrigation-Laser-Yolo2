@@ -23,6 +23,8 @@
 # Pilot first if you like:  STIR_REG_SEEDS=0 sbatch slurm/run_stir_regularize.slurm
 # Round 2 only:  STIR_REG_ARMS=ls_wd_lr_e60,ls_wd_lr_e100,ls2_wd_lr_e100 sbatch slurm/run_stir_regularize.slurm
 # (scoring always rescores every run under runs/stir_reg, round 1 included)
+# Stage 1 retrain (COCO init, hyp.stir-soil.yaml; 5 arms x 3 seeds = 15 runs):
+#   STIR_REG_ARMS=s1_ls_wd,s1_ls_wd_lr,s1_ls_wd_lr_e100,s1_ls_wd_lr_e60,s1_ls_wd_lr3_e100 sbatch slurm/run_stir_regularize.slurm
 
 echo "Job started on $(hostname) at $(date)"
 mkdir -p /projects/kp9e/Irrigation-Laser-Yolo2/logs
@@ -45,7 +47,7 @@ cd /projects/kp9e/Irrigation-Laser-Yolo2
 export STIR_REG_ARMS STIR_REG_SEEDS
 
 for f in scripts/training/tr_stir_regularize.py scripts/evaluation/eval_stir_regularize.py \
-         data/hyps/hyp.stir-finetune.yaml \
+         data/hyps/hyp.stir-finetune.yaml data/hyps/hyp.stir-soil.yaml yolov5s.pt \
          data/training-data/downloaded/soil_moisture_stir_september/data.yaml \
          data/training-data/downloaded/soil_moisture_stir_september/test/images \
          runs/train/downloaded/soil-moisture-ir/weights/best.pt; do
@@ -53,6 +55,8 @@ for f in scripts/training/tr_stir_regularize.py scripts/evaluation/eval_stir_reg
 done
 [ -f runs/fine-tuned/soil_moisture_stir_september/weights/last.pt ] || \
     echo "NOTE: paper Stage 3 stir run not found; the summary will have no 'paper' reference row"
+[ -f runs/train/downloaded/soil_moisture_stir_september/weights/last.pt ] || \
+    echo "NOTE: paper Stage 1 stir run not found; the summary will have no 'paper_s1' reference row"
 
 echo "Running scripts/training/tr_stir_regularize.py ..."
 python scripts/training/tr_stir_regularize.py
