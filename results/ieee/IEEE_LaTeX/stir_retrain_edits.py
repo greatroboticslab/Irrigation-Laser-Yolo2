@@ -99,15 +99,19 @@ Weight decay alone leaves the turn in place (Table~\ref{tab:stirreg}), and label
      r"""\textbf{Arm} & \textbf{Ep.~10} & \textbf{Ep.~30} & \textbf{Ep.~50} & \textbf{Final} & \textbf{mAP@0.5} & \textbf{ECE} \\"""),
     (r"""Frozen backbone & 0.28 & 0.33 & 0.36 & 0.31 & 0.258 & 0.351 \\""",
      r"""Frozen backbone & 0.28 & 0.33 & 0.36 & 0.31 & 0.258 & 0.351 \\
-Retrained & 0.35 & 0.72 & 0.83 & 0.85 & 0.760 & @ECE_REG@ \\"""),
+Retrained & 0.35 & 0.72 & 0.83 & 0.85 & 0.760 & 0.081 \\"""),
     (r"""mAP@0.5 is the mean held-out value at epoch 99 across folds and seeds, augmented copies included; ECE is computed over all held-out frames at epoch 99.}""",
      r"""Final is epoch 99, or epoch 59 for the retrained arm. mAP@0.5 is the mean held-out value at the final epoch across folds and seeds, augmented copies included; ECE is computed over all held-out frames at the final epoch.}"""),
 
-    # 12. CV result for the retrained arm.
-    (r"""The cross-validated recipe therefore does not reproduce the collapse of the shipped run,""",
-     r"""The retrained recipe matches it on independent scenes: out-of-fold accuracy $0.845 \pm 0.057$ over seeds at epoch 59, still rising at the end of its schedule, @CI_REG@ and a mean held-out $\text{mAP@0.5}$ of 0.760. The difference from the unregularized recipe, 0.012, is less than one original in 56, so the regularization that removes the loss turn costs no measurable accuracy.
+    # 12b. The weaknesses paragraph describes the unregularized recipe.
+    (r"""Two weaknesses remain. The spread across folds""",
+     r"""Two weaknesses of the unregularized recipe remain, and the retrained recipe narrows both. The spread across folds"""),
 
-The cross-validated recipe therefore does not reproduce the collapse of the shipped run,"""),
+    # 12. CV result for the retrained arm.
+    (r"""\subsection{Illumination and Training Volume}""",
+     r"""The retrained recipe matches the unregularized one on independent scenes: out-of-fold accuracy $0.845 \pm 0.057$ over seeds at epoch 59, still rising at the end of its schedule, with a 95\% interval of 0.77 to 0.92 from resampling whole bursts and a mean held-out $\text{mAP@0.5}$ of 0.760. Its spread across folds is smaller (standard deviation 0.095 against 0.165, worst fold 0.70 against 0.61), and level~1 rises from 0.50 to 0.71. Label smoothing lowers its confidence on correct predictions (mean 0.72 against 0.82), which raises expected calibration error slightly, to 0.081, while the share of held-out errors made above 0.9 confidence falls from 1.6\% to 0.2\%. The difference from the unregularized recipe, 0.012, is less than one original in 56, so the regularization that removes the loss turn costs no measurable accuracy.
+
+\subsection{Illumination and Training Volume}"""),
 ]
 
 
@@ -124,5 +128,5 @@ if __name__ == "__main__":
     import sys
     src = sys.argv[1] if len(sys.argv) > 1 else "IEEE_paper_live_20261014.tex"
     out = apply(open(src).read())
-    left = [p for p in ("@ECE_REG@", "@CI_REG@") if p in out]
-    print("all edits match;", "placeholders left: " + ", ".join(left) if left else "no placeholders")
+    assert "_REG@" not in out, "unfilled placeholder"
+    print(f"all {len(EDITS)} edits match")
