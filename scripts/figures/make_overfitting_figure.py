@@ -20,6 +20,17 @@ Two cautions are built into how this is read:
     is measured on near-duplicates of the training data and cannot detect
     memorisation at all. That applies to the v4 family; see the burst section.
 
+Stage 3 Mixed Color and Background is the retrained run from the
+regularisation sweep (scripts/training/tr_stir_regularize.py, arm ls_wd_lr_e60:
+label smoothing 0.1, weight_decay 0.05, lr0 0.0003, 60 epochs), drawn as the
+mean of its three seeds with a min-max band. Its validation curve is the
+unsmoothed rescoring from scripts/evaluation/eval_stir_regularize.py (every 5
+epochs), because YOLOv5 logs validation loss against the smoothed targets and
+that would sit on a different scale from the other runs. Its training curve is
+the logged one; label smoothing puts a floor under it, so its flattening is not
+on its own evidence of less memorisation. The original run is kept as a faint
+dashed line (SHOW_ORIGINAL).
+
 Usage (from the project root):
   python scripts/figures/make_overfitting_figure.py
 """
@@ -74,6 +85,11 @@ COLORS = {
 # against six curves that do not move.
 EMPHASIS = "soil_moisture_stir_september"
 
+# Retrained Stage 3 Mixed Color run (replaces the original in the Stage 3 panels).
+REG_DIR = UPDATED / "stir_reg_round2"
+REG_ARM, REG_SEEDS = "ls_wd_lr_e60", (0, 1, 2)
+SHOW_ORIGINAL = True
+
 # Epochs before this are ignored when locating the validation minimum: the
 # detector predicts almost nothing in the first few dozen epochs, which gives a
 # spuriously low loss that is an artefact of silence, not of fit.
@@ -103,8 +119,38 @@ FS_TICK = 6.5
 FS_LEG = 6
 
 
-def panel(ax, base_dir, datasets, metric, title, ylabel, mark_min):
+def reg_curve(metric):
+    """(epochs, mean, lo, hi) over seeds for the retrained Mixed Color run."""
+    if metric == "val/cls_loss":
+        with open(REG_DIR / "stir_reg_curves.csv", newline="") as f:
+            rows = [r for r in csv.DictReader(f) if r["arm"] == REG_ARM]
+        per_seed = [[float(r["val_cls_loss"]) for r in sorted(
+            (r for r in rows if int(r["seed"]) == s), key=lambda r: int(r["epoch"]))]
+            for s in REG_SEEDS]
+        epochs = sorted({int(r["epoch"]) for r in rows})
+    else:
+        cols = [read_curve(REG_DIR / REG_ARM / f"seed{s}_results.csv") for s in REG_SEEDS]
+        per_seed = [c[metric] for c in cols]
+        epochs = cols[0]["epoch"]
+    by_ep = list(zip(*per_seed))
+    return (epochs, [sum(v) / len(v) for v in by_ep],
+            [min(v) for v in by_ep], [max(v) for v in by_ep])
+
+
+def panel(ax, base_dir, datasets, metric, title, ylabel, mark_min, retrained=False):
     for ds in datasets:
+        if retrained and ds == EMPHASIS:
+            c = COLORS[ds]
+            if SHOW_ORIGINAL:
+                orig = read_curve(base_dir / ds / "results.csv")
+                ax.plot(orig["epoch"], orig[metric], color=c, lw=0.6, ls=(0, (2, 1.5)),
+                        alpha=0.45, zorder=3, label="Mixed Color (original)")
+            ep, mean, lo, hi = reg_curve(metric)
+            ax.fill_between(ep, lo, hi, color=c, alpha=0.3, lw=0, zorder=3)
+            ax.plot(ep, mean, color=c, lw=1.4, zorder=4,
+                    marker="o" if len(ep) < 30 else None, ms=1.8,
+                    label="Mixed Color (retrained)")
+            continue
         path = base_dir / ds / "results.csv"
         if not path.is_file():
             print(f"  MISSING {path}")
@@ -142,11 +188,11 @@ def main():
     panel(axes[0][0], STAGE1_DIR, STAGE1, "val/cls_loss",
           "Stage 1", "Validation cls loss", True)
     panel(axes[0][1], STAGE3_DIR, STAGE3, "val/cls_loss",
-          "Stage 3", None, True)
+          "Stage 3", None, True, retrained=True)
     panel(axes[1][0], STAGE1_DIR, STAGE1, "train/cls_loss",
           None, "Training cls loss", False)
     panel(axes[1][1], STAGE3_DIR, STAGE3, "train/cls_loss",
-          None, None, False)
+          None, None, False, retrained=True)
     for ax in axes[1]:
         ax.set_xlabel("Epoch", fontsize=FS, labelpad=1)
         ax.set_xticks([0, 50, 100, 150, 200])
