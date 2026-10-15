@@ -26,8 +26,10 @@ label smoothing 0.1, weight_decay 0.05, lr0 0.0003, 60 epochs), drawn as the
 mean of its three seeds with a min-max band. Its validation curve is the
 unsmoothed rescoring from scripts/evaluation/eval_stir_regularize.py (every 5
 epochs), because YOLOv5 logs validation loss against the smoothed targets and
-that would sit on a different scale from the other runs. Its training curve is
-the logged one; label smoothing puts a floor under it, so its flattening is not
+that would sit on a different scale from the other runs. Stage 1 Mixed Color
+is likewise the retrained arm s1_ls_wd_lr3_e100 (COCO init, label smoothing
+0.1, weight_decay 0.05, lr0 0.003 instead of 0.01, 100 epochs). Each training
+curve is the logged one; label smoothing puts a floor under it, so its flattening is not
 on its own evidence of less memorisation. The original run is kept as a faint
 dashed line (SHOW_ORIGINAL).
 
@@ -85,9 +87,11 @@ COLORS = {
 # against six curves that do not move.
 EMPHASIS = "soil_moisture_stir_september"
 
-# Retrained Stage 3 Mixed Color run (replaces the original in the Stage 3 panels).
-REG_DIR = UPDATED / "stir_reg_round2"
-REG_ARM, REG_SEEDS = "ls_wd_lr_e60", (0, 1, 2)
+# Retrained Mixed Color runs, per stage: (sweep results dir, arm). They replace
+# the original run in that stage's panels.
+REG = {1: (UPDATED / "stir_reg_round3", "s1_ls_wd_lr3_e100"),
+       3: (UPDATED / "stir_reg_round2", "ls_wd_lr_e60")}
+REG_SEEDS = (0, 1, 2)
 SHOW_ORIGINAL = True
 
 # Epochs before this are ignored when locating the validation minimum: the
@@ -113,23 +117,24 @@ def read_curve(path):
 # The figure is drawn at its printed size (IEEE single column, 3.5 in) so that
 # font sizes here are the sizes on the page. An earlier 11 in version was scaled
 # to a third by \includegraphics[width=\columnwidth] and printed at about 2 pt.
-FIG_W, FIG_H = 3.5, 4.1
+FIG_W, FIG_H = 3.5, 4.3
 FS = 7      # titles and axis labels, pt
 FS_TICK = 6.5
 FS_LEG = 6
 
 
-def reg_curve(metric):
-    """(epochs, mean, lo, hi) over seeds for the retrained Mixed Color run."""
+def reg_curve(stage, metric):
+    """(epochs, mean, lo, hi) over seeds for a stage's retrained Mixed Color run."""
+    reg_dir, arm = REG[stage]
     if metric == "val/cls_loss":
-        with open(REG_DIR / "stir_reg_curves.csv", newline="") as f:
-            rows = [r for r in csv.DictReader(f) if r["arm"] == REG_ARM]
+        with open(reg_dir / "stir_reg_curves.csv", newline="") as f:
+            rows = [r for r in csv.DictReader(f) if r["arm"] == arm]
         per_seed = [[float(r["val_cls_loss"]) for r in sorted(
             (r for r in rows if int(r["seed"]) == s), key=lambda r: int(r["epoch"]))]
             for s in REG_SEEDS]
         epochs = sorted({int(r["epoch"]) for r in rows})
     else:
-        cols = [read_curve(REG_DIR / REG_ARM / f"seed{s}_results.csv") for s in REG_SEEDS]
+        cols = [read_curve(reg_dir / arm / f"seed{s}_results.csv") for s in REG_SEEDS]
         per_seed = [c[metric] for c in cols]
         epochs = cols[0]["epoch"]
     by_ep = list(zip(*per_seed))
@@ -137,15 +142,15 @@ def reg_curve(metric):
             [min(v) for v in by_ep], [max(v) for v in by_ep])
 
 
-def panel(ax, base_dir, datasets, metric, title, ylabel, mark_min, retrained=False):
+def panel(ax, base_dir, datasets, metric, title, ylabel, mark_min, retrained=None):
     for ds in datasets:
-        if retrained and ds == EMPHASIS:
+        if retrained and ds == EMPHASIS:  # retrained = stage number
             c = COLORS[ds]
             if SHOW_ORIGINAL:
                 orig = read_curve(base_dir / ds / "results.csv")
                 ax.plot(orig["epoch"], orig[metric], color=c, lw=0.6, ls=(0, (2, 1.5)),
                         alpha=0.45, zorder=3, label="Mixed Color (original)")
-            ep, mean, lo, hi = reg_curve(metric)
+            ep, mean, lo, hi = reg_curve(retrained, metric)
             ax.fill_between(ep, lo, hi, color=c, alpha=0.3, lw=0, zorder=3)
             ax.plot(ep, mean, color=c, lw=1.4, zorder=4,
                     marker="o" if len(ep) < 30 else None, ms=1.8,
@@ -186,13 +191,13 @@ def main():
     fig, axes = plt.subplots(2, 2, figsize=(FIG_W, FIG_H), sharex=True)
 
     panel(axes[0][0], STAGE1_DIR, STAGE1, "val/cls_loss",
-          "Stage 1", "Validation cls loss", True)
+          "Stage 1", "Validation cls loss", True, retrained=1)
     panel(axes[0][1], STAGE3_DIR, STAGE3, "val/cls_loss",
-          "Stage 3", None, True, retrained=True)
+          "Stage 3", None, True, retrained=3)
     panel(axes[1][0], STAGE1_DIR, STAGE1, "train/cls_loss",
-          None, "Training cls loss", False)
+          None, "Training cls loss", False, retrained=1)
     panel(axes[1][1], STAGE3_DIR, STAGE3, "train/cls_loss",
-          None, None, False, retrained=True)
+          None, None, False, retrained=3)
     for ax in axes[1]:
         ax.set_xlabel("Epoch", fontsize=FS, labelpad=1)
         ax.set_xticks([0, 50, 100, 150, 200])
@@ -205,11 +210,11 @@ def main():
     axes[0][1].set_ylim(0.0015, 0.30)
 
     # One legend per column, under the panels, so no curve is hidden.
-    fig.tight_layout(rect=(0, 0.2, 1, 1), h_pad=0.4, w_pad=0.6)
+    fig.tight_layout(rect=(0, 0.22, 1, 1), h_pad=0.4, w_pad=0.6)
     for col, x in ((0, axes[1][0]), (1, axes[1][1])):
         h, l = x.get_legend_handles_labels()
         box = x.get_position()
-        fig.legend(h, l, loc="upper left", bbox_to_anchor=(box.x0 - 0.06, 0.19),
+        fig.legend(h, l, loc="upper left", bbox_to_anchor=(box.x0 - 0.06, 0.21),
                    fontsize=FS_LEG, frameon=False, handlelength=1.4,
                    handletextpad=0.4, labelspacing=0.25, borderaxespad=0)
 

@@ -11,9 +11,9 @@ IV-VI. Both are drawn at their printed size (IEEE single column, 3.5 in), so the
 font sizes here are the sizes on the page. The dashed 0.5 line is explained in
 the LaTeX caption rather than a legend, which collided with the bars.
 
-The Stage 3 Mixed Color and Background bar is the retrained run
-(scripts/training/tr_stir_regularize.py, arm ls_wd_lr_e60), whose original
-recipe overfit: its bar is the mean over three seeds of each seed's peak, with
+The Mixed Color and Background bars are the retrained runs
+(scripts/training/tr_stir_regularize.py; Stage 1 arm s1_ls_wd_lr3_e100, Stage 3
+arm ls_wd_lr_e60), whose original recipes overfit: each bar is the mean over three seeds of each seed's peak, with
 the seed standard deviation as an error bar.
 
 Display names come from the per-figure name maps, the one place to edit if the
@@ -51,6 +51,9 @@ FIGURES = [
         "out": "_fig4_view",
         "label_fs": 6.5,
         "rotate": 35,  # seven one-line names do not fit side by side at 3.5 in
+        "seeds": {"soil_moisture_stir_september": [
+            ROOT / "results" / "stir_reg_round3" / "s1_ls_wd_lr3_e100" / f"seed{s}_results.csv"
+            for s in (0, 1, 2)]},
     },
     {
         "runs": RUNS / "fine-tuned",
