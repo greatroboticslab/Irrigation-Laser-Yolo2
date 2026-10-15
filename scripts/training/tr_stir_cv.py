@@ -9,6 +9,10 @@ Two cheap remedies are compared here, on the folds built by scripts/data_prep/bu
           data/hyps/hyp.stir-finetune.yaml (copied from that run), AdamW, cos-lr
   freeze  the same, with the 10 backbone layers frozen so only the neck and head
           can adapt to 45 scenes
+  reg     the recipe that stopped the overfitting in the regularisation sweep
+          (scripts/training/tr_stir_regularize.py, arm ls_wd_lr_e60): label
+          smoothing 0.1, weight_decay 0.05, lr0 0.0003, 60-epoch cosine schedule.
+          Its epoch budget is its own; STIR_CV_EPOCHS applies to full and freeze.
 
 Early stopping is evaluated without selection bias. Every run trains a fixed
 EPOCHS budget with patience disabled and saves a checkpoint every SAVE_PERIOD
@@ -22,7 +26,7 @@ Usage (from the project root):
   python scripts/data_prep/build_stir_cv.py
   python scripts/training/tr_stir_cv.py
   python scripts/evaluation/eval_stir_cv.py
-Environment overrides: STIR_CV_ARMS=full,freeze  STIR_CV_SEEDS=0,1,2
+Environment overrides: STIR_CV_ARMS=full,freeze,reg  STIR_CV_SEEDS=0,1,2
                        STIR_CV_EPOCHS=100  STIR_CV_SAVE_PERIOD=10
                        STIR_CV_FOLDS=fold00,fold01   (default: all folds)
 """
@@ -31,6 +35,8 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+
+import yaml
 
 PROJECT_DIR = "/projects/kp9e/Irrigation-Laser-Yolo2"
 if not os.path.isdir(PROJECT_DIR):  # allow local smoke tests
@@ -50,7 +56,13 @@ SEEDS = [int(x) for x in os.environ.get("STIR_CV_SEEDS", "0,1,2").split(",") if 
 EPOCHS = int(os.environ.get("STIR_CV_EPOCHS", "100"))
 SAVE_PERIOD = int(os.environ.get("STIR_CV_SAVE_PERIOD", "10"))
 ONLY_FOLDS = {x.strip() for x in os.environ.get("STIR_CV_FOLDS", "").split(",") if x.strip()}
-FREEZE = {"full": "0", "freeze": "10"}
+FREEZE = {"full": "0", "freeze": "10", "reg": "0"}
+# arm -> (hyp overrides, label smoothing, epochs or None for EPOCHS)
+RECIPE = {
+    "full":   ({}, 0.0, None),
+    "freeze": ({}, 0.0, None),
+    "reg":    ({"weight_decay": 0.05, "lr0": 0.0003}, 0.1, 60),
+}
 
 
 def folds():
@@ -60,22 +72,38 @@ def folds():
                   if d.startswith("fold") and (not ONLY_FOLDS or d in ONLY_FOLDS))
 
 
+def hyp_for(arm):
+    overrides = RECIPE[arm][0]
+    if not overrides:
+        return HYP
+    with open(HYP) as f:
+        hyp = yaml.safe_load(f)
+    hyp.update(overrides)
+    path = os.path.join(PROJECT_OUT, "hyps", f"hyp.{arm}.yaml")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w") as f:
+        yaml.safe_dump(hyp, f, sort_keys=False)
+    return path
+
+
 def train(fold, arm, seed):
     name = f"stir__{fold}__{arm}__seed{seed}"
     if os.path.isfile(os.path.join(PROJECT_OUT, name, "weights", "last.pt")):
         print(f"skip {name}: already trained", flush=True)
         return
+    _, smoothing, epochs = RECIPE[arm]
     cmd = [
         PYTHON, os.path.join(PROJECT_DIR, "train.py"),
         "--img", "640",
-        "--epochs", str(EPOCHS),
+        "--epochs", str(epochs or EPOCHS),
         "--batch-size", "32",
         "--data", os.path.join(CV_ROOT, fold, "data.yaml"),
         "--weights", INIT,
-        "--hyp", HYP,
+        "--hyp", hyp_for(arm),
         "--device", "",
         "--optimizer", "AdamW",
         "--cos-lr",
+        "--label-smoothing", str(smoothing),
         "--patience", "0",            # 0 = never stop early; stopping is chosen from CV
         "--save-period", str(SAVE_PERIOD),
         "--freeze", FREEZE[arm],
@@ -89,6 +117,9 @@ def train(fold, arm, seed):
 
 
 def main():
+    unknown = [a for a in ARMS if a not in RECIPE]
+    if unknown:
+        sys.exit(f"ERROR: unknown arms {unknown}; choose from {list(RECIPE)}")
     for path in (INIT, HYP):
         if not os.path.isfile(path):
             sys.exit(f"ERROR: {path} not found")

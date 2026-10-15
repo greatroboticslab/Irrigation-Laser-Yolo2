@@ -65,6 +65,8 @@ cd /projects/kp9e/Irrigation-Laser-Yolo2
 # STIR_CV_ARMS, STIR_CV_SEEDS, STIR_CV_EPOCHS, STIR_CV_SAVE_PERIOD, STIR_CV_FOLDS
 # pass through to scripts/training/tr_stir_cv.py if set, e.g.
 #   STIR_CV_SEEDS=0 sbatch slurm/run_stir_cv.slurm        # 10-run pilot
+#   STIR_CV_ARMS=reg sbatch slurm/run_stir_cv.slurm      # sweep winner, 15 runs of 60 epochs;
+#                                                        # existing full/freeze runs are rescored too
 export STIR_CV_ARMS STIR_CV_SEEDS STIR_CV_EPOCHS STIR_CV_SAVE_PERIOD STIR_CV_FOLDS
 
 for f in scripts/data_prep/build_stir_cv.py scripts/training/tr_stir_cv.py scripts/evaluation/eval_stir_cv.py scripts/evaluation/eval_calibration.py \

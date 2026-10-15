@@ -1,0 +1,511 @@
+﻿\documentclass[journal]{IEEEtran}
+
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage[T1]{fontenc}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{multirow}
+
+\hyphenation{op-tical net-works semi-conduc-tor}
+
+\begin{document}
+
+\title{DUMMY: \\
+DUMMIES}
+
+\author{First~A.~Author,~\IEEEmembership{Member,~IEEE,}
+        Second~B.~Author,
+        and~Third~C.~Author% <-- replace with the real author list
+\thanks{Manuscript prepared July 2026. \emph{(Placeholder author block: replace with the real names, affiliations, and funding acknowledgments before submission.)}}
+\thanks{The authors are with the Department of Computer Science, Middle Tennessee State University, Murfreesboro, TN, USA (e-mail: author@example.edu).}}
+
+\markboth{IEEE Transactions on Instrumentation and Measurement,~Vol.~XX, No.~XX, Month~2026}%
+{Author \MakeLowercase{\textit{et al.}}: Reading a Commercial Soil Stir-Probe by Camera}
+
+\maketitle
+
+\begin{abstract}
+Real time soil moisture sensing in irrigated horticulture is dominated by contact instrumentation that is intrusive, energy hungry, and costly to scale on a per plant basis. We show that a single overhead camera can autonomously read a low cost commercial stir probe whose tip mounted RGB LED encodes moisture as a continuous color shift from red orange (level~1, dry) to blue violet (level~10, saturated), turning passive imagery of an unmodified consumer device into a quantitative moisture index. We pose the problem as multiclass object detection, in which a YOLOv5s detector simultaneously localizes the LED tip and assigns one of five moisture classes, and we address three challenges that arise. First, the class signal lives in hue, so standard photometric augmentation destroys labels. Second, the primary stir-probe dataset contains only 56 images. Third, illumination conditions (ultraviolet, infrared) and class taxonomies (5  and 11 level) differ across the seven datasets used. Our pipeline introduces a class preserving augmentation policy that caps hue jitter at $\pm 8^{\circ}$, an index normalization step that corrects alphabetical class ordering before pooling, and a three stage training protocol built from COCO baselines, label compatible pooling, and fine-tuning from the strongest soil moisture checkpoint. After fine-tuning, six of seven datasets exceed $\text{mAP@0.5}=0.91$, the IR-combined merge reaches 0.995, and the IR-Soil-Only variant improves by 43.9 points over its COCO baseline. Domain specific initialization removes the early validation loss spikes seen with COCO weights, halves the time to peak accuracy, and lifts strict-IoU localization ($\text{mAP@0.5{:}0.95}$) from the 0.19 to 0.56 range up to 0.59 to 0.70. The framework demonstrates that a commodity sensor and a single fixed camera can support continuous, non contact moisture monitoring at deployment grade accuracy, providing a scalable alternative to per plant transducer arrays.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Soil moisture sensing, object detection, YOLOv5, precision irrigation, data augmentation, transfer learning, computer vision.
+\end{IEEEkeywords}
+
+\section{Introduction}
+\IEEEPARstart{I}{rrigated} horticulture accounts for roughly 70\% of global freshwater withdrawals \cite{fao2020}, and even modest gains in moisture aware scheduling translate directly into water savings and yield. Yet the sensors that drive scheduling, including capacitance probes, time domain reflectometers, tensiometers, and gravimetric samplers, share a common deployment cost: each plant or zone requires its own transducer, calibration, wiring, and maintenance \cite{lekshmi2014,kashyap2021}. Per plant cost limits the density of measurement, which in turn limits the spatial resolution at which scheduling can be optimized. A noncontact reading method that is cheap to scale is therefore an enabling step toward fine grained precision irrigation.
+
+Computer vision offers an obvious lever. Recent work has applied convolutional networks to plant scale moisture proxies such as leaf wilting \cite{kaneda2017} and canopy thermography \cite{garciatejero2018}, but each of these requires either thermal hardware, controlled imaging, or physiological proxies whose relationship to root zone moisture is indirect. A third class of approach reads the indicator on an existing sensor: meter dial readers \cite{liu2019} and seven segment display recognizers \cite{salomon2022} treat the sensor as a passive scene element. To our knowledge, no published study reads a low cost commercial stir probe whose LED color encodes a continuous moisture index, despite the wide commercial availability of such devices.
+
+The stir probe targeted in this study costs under USD~15, is sold as a consumer plant care accessory, and reports moisture on a 1 to 10 ordinal scale through a tip mounted RGB LED that shifts monotonically from red orange (dry) through pink magenta and blue violet to saturated indigo (wet). Reading the device by camera converts a per plant transducer into a per pot visual cue that one fixed overhead camera can monitor for an arbitrary number of pots simultaneously.
+
+Three properties make the task nontrivial. First, the discriminative signal is hue, not shape: the LED occupies less than 2\% of the frame, and adjacent classes in the blue violet range (levels 7, 8, and 10) differ primarily in spot diameter and saturation. Second, the LED and soil coupling reverses contrast across the moisture scale, so a faint red orange glow over bright dry soil at one extreme shifts to a bright blue violet bloom over dark wet soil at the other. Third, public training data for this specific device is absent and must be assembled from a heterogeneous mix of small in house collections and public sources captured under different illumination modalities and class taxonomies.
+
+This paper makes the following contributions.
+\begin{enumerate}
+\item \textbf{Vision based reading framework.} A framework for an unmodified consumer soil probe, formulated as a single multiclass object detection task that produces a localized, ordinal moisture estimate suitable for downstream irrigation logic.
+\item \textbf{Class preserving augmentation policy.} A policy that caps hue jitter at $\pm 8^{\circ}$ (the empirical interclass crossover bound) and combines it with non hue photometric and full geometric diversity, expanding the 56 image primary dataset to 1{,}157 frames ($20.7\times$) without injecting hue induced label noise.
+\item \textbf{Label normalization procedure.} A procedure that corrects the alphabetical class ordering of exported datasets, a silent failure mode in which moisture level 10 is mistakenly assigned class index 2, enabling the pooling of label compatible datasets.
+\item \textbf{Three stage training protocol.} A protocol (COCO baselines, label compatible pooling, and domain specific fine-tuning) that is shown to be additive: pooling lifts the weaker ultraviolet dataset from 0.760 to 0.942 mAP@0.5, and fine-tuning further lifts the IR-combined model to 0.995.
+\item \textbf{Multi modality illumination study.} A study across ultraviolet and IR illumination on a controlled soil-only dataset family, showing that all three capture sets reach $\text{mAP@0.5} \geq 0.91$ once domain specific weights are in use, and that COCO baseline orderings track training volume rather than illumination, so they do not predict final fine-tuned rankings.
+\end{enumerate}
+
+The remainder of the paper is organized as follows. Section~\ref{sec:method} details the sensor, datasets, augmentation policy, architecture, training protocol, and evaluation. Section~\ref{sec:results} reports baseline, merged, fine-tuned, modality, and confusion matrix results. Section~\ref{sec:discussion} discusses implications, label noise limitations, and deployment outlook. Section~\ref{sec:conclusion} concludes.
+
+\section{Methodology}
+\label{sec:method}
+
+\subsection{Sensor and Physical Color Signal}
+The target device is a cylindrical consumer stir probe inserted vertically into potting soil. Embedded circuitry reads substrate capacitance and drives a tip mounted RGB LED whose dominant wavelength shifts monotonically with moisture (Table~\ref{tab:led}, Fig.~\ref{fig:led}). Total luminous flux at the soil surface increases with moisture, producing two coupled effects that are relevant for detection. At low moisture the soil is light and dry, which depresses contrast against a faint red orange glow. At high moisture the soil is dark and wet, which amplifies contrast but also drives camera side core clipping that can distort apparent color. A practically useful detector must remain robust across both regimes.
+
+\begin{table}[!t]
+\renewcommand{\arraystretch}{1.3}
+\caption{Moisture Level LED Color Mappings and Observed Signal Characteristics}
+\label{tab:led}
+\centering
+\begin{tabular}{c p{3.6cm} c}
+\toprule
+\textbf{Level} & \textbf{LED Color Description} & \textbf{Spot Diam.} \\
+\midrule
+1  & Faint red orange glow; dim, concentrated point & 15--30 px \\
+3  & Pink magenta to pale purple; moderate brightness & 25--55 px \\
+7  & Clear blue violet (indigo); visible halo on soil & 35--70 px \\
+8  & Strong blue violet bloom; diffuse into wet soil & 60--100 px \\
+10 & Intensely bright blue violet/indigo; saturated core & 80--140 px \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\columnwidth]{figs/fig1_led_levels.png}
+\caption{LED appearance at all five moisture levels.}
+\label{fig:led}
+\end{figure}
+
+\subsection{Datasets}
+Seven datasets covering ultraviolet and infrared illumination and two class taxonomies were used (Table~\ref{tab:datasets}). The primary dataset, \texttt{Mixed Color and Background}, comprises 56 overhead $640 \times 640$~px frames of a single instrumented grow pot (39 train, 12 validation, 5 test), each carrying a single YOLO bounding box around the LED tip and a label drawn from $\{1, 3, 7, 8, 10\}$. Every result reported for this dataset uses its offline expansion (Table~\ref{tab:aug}) to 858 training, 204 validation and 95 test frames; each split is expanded only from its own originals, so the number of independent frames remains 39, 12 and 5. Six supporting datasets were drawn from a public robotics-lab workspace. Three were 11 class collections (\texttt{UV-Soil-Only-Baseline}, \texttt{IR-Soil-Only}, \texttt{UV-Soil-Only-Target}) imaged under controlled ultraviolet and IR illumination of an identical pot configuration. Two were 5 class ultraviolet and IR collections of the stir probe class (\texttt{UV-Pot-Background}, \texttt{IR-Pot-Background}). One was an outdoor 11 class field collection (\texttt{UV-Strawberry-Pot}) acquired without active stirring. A further candidate, \texttt{soil-moisture-v3}, was excluded because its 87 raw voltage classes were incompatible with the discrete schemas used here. Fig.~\ref{fig:datasets} gives a visual overview.
+
+\begin{table}[!t]
+\renewcommand{\arraystretch}{1.3}
+\caption{Dataset Summary}
+\label{tab:datasets}
+\centering
+\footnotesize
+\begin{tabular}{p{2.9cm} c c p{2.1cm}}
+\toprule
+\textbf{Dataset} & \textbf{nc} & \textbf{Illum.} & \textbf{Notes} \\
+\midrule
+UV-Soil-Only-Baseline & 11 & UV & Strongest 11-class baseline \\
+IR-Soil-Only & 11 & IR & Fine-tuning target \\
+UV-Soil-Only-Target & 11 & UV & Fine-tuning target \\
+IR-Pot-Background & 5 & IR & Strongest baseline; transfer source \\
+UV-Pot-Background & 5 & UV & UV 5-class baseline \\
+UV-Strawberry-Pot & 11 & UV & Outdoor field; merge partner \\
+Mixed Color and Background & 5 & UV & Primary task; 56 real frames, 1157 after expansion \\
+IR-Combined & 5 & IR & Pool of UV-Pot-Background + IR-Pot-Background \\
+UV-Combined & 11 & UV & Pool of UV-Soil-Only-Baseline + UV-Strawberry-Pot \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\columnwidth]{figs/fig2_datasets_overview.png}
+\caption{Overview of the datasets used in this study.}
+\label{fig:datasets}
+\end{figure}
+
+\subsection{Class Normalization and Dataset Pooling}
+Two pooled configurations were assembled. The IR-Combined configuration pooled \texttt{UV-Pot-Background} and \texttt{IR-Pot-Background}, which share class names and indices and required only image and label aggregation. The UV-Combined configuration required correcting an ordering inconsistency: dataset exports use alphabetical class names, so the string ``10'' precedes ``2'' and moisture level 10 is assigned class index 2. We remapped both source datasets so that index $N$ maps to level $N$ before pooling. This re-indexing is a silent failure mode, because without it two label compatible datasets cannot be pooled at all, and the resulting confusion is class systematic rather than performance degrading, which makes it easy to miss in casual evaluation.
+
+\subsection{Class Preserving Data Augmentation}
+Augmentation of LED color classification data violates an assumption that underlies most detection pipelines. Standard photometric augmentation perturbs hue by $\pm 20$ to $30^{\circ}$ because object identity is hue invariant in conventional detection. Here the class label \emph{is} the hue, and a $\pm 20^{\circ}$ perturbation applied to a level 3 (pink magenta) frame produces a glow that is visually indistinguishable from level 7 (blue violet), which injects silently mislabelled samples directly into training. We measured the interclass crossover threshold empirically across the five LED states and adopted a hue shift cap of $\pm 8^{\circ}$ as the largest perturbation that preserves dominant wavelength identity for every class.
+
+Within that constraint, we apply non-hue photometric transforms and full geometric diversity using the Albumentations library (Table~\ref{tab:aug}). Geometric transforms model natural variation in camera positioning and scene layout for an overhead pot view: horizontal flip ($p=0.5$) and vertical flip ($p=0.2$) reflecting the rotational symmetry of the view; rotation up to $\pm 20^{\circ}$ ($p=0.6$) with reflection border mode; perspective warp with scale factor 0.03 to 0.08 ($p=0.4$); random resized crop to $640 \times 640$ at 75 to 100\% scale ($p=0.5$); and shift-scale-rotate with shift $\pm 8\%$, scale $\pm 15\%$, and rotate $\pm 10^{\circ}$ ($p=0.4$). Photometric transforms model variation in indoor lighting, sensor noise, and post processing compression: brightness and contrast adjustment ($p=0.8$), the most aggressively applied transform; Gaussian blur (kernel 3 to 7~px, $p=0.3$) and motion blur (kernel 3 to 9~px, $p=0.2$); Gaussian noise ($\sigma = 0.02$ to $0.08$, $p=0.4$); JPEG compression at quality 60 to 95 ($p=0.3$); constrained HSV hue shift capped at $\pm 8^{\circ}$ ($p=0.5$); RGB channel shift ($\pm 15$ per channel, $p=0.3$); and random shadow ($p=0.3$) and random fog ($p=0.1$). A box-visibility threshold of 0.3 discards crops in which the LED region falls below 30\% of its original area. Each augmented copy is produced from a deterministic seed jointly derived from source image and copy indices for full reproducibility. A second offline pass then adds eight deterministic copies of every original: horizontal flip, vertical flip, rotation by 90, 180 and 270$^{\circ}$, a brightness and contrast change, Gaussian blur with additive noise, and a combined flip, rotation and brightness change. No transform in this pass alters hue.
+
+\begin{table}[!t]
+\renewcommand{\arraystretch}{1.3}
+\caption{Augmentation Expansion of the Primary Stir Probe Dataset}
+\label{tab:aug}
+\centering
+\begin{tabular}{l c c c c}
+\toprule
+\textbf{Split} & \textbf{Originals} & \textbf{Pass 1} & \textbf{Pass 2} & \textbf{Total} \\
+\midrule
+Train      & 39 & 13 & 8 & 858 \\
+Validation & 12 & 8  & 8 & 204 \\
+Test       & 5  & 10 & 8 & 95 \\
+\midrule
+Total      & 56 &    &   & 1157 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The expansion multiplies frames, not scenes. The validation split grows from 12 to 204 frames, about 41 per class, but copies of one original are not independent evaluations: the expanded split makes the metric less coarse without reducing its sampling variance, which is still set by 12 originals, about 2.4 per class. A custom YOLOv5 hyperparameter file (\texttt{hyp.stir-soil.yaml}) tuned mosaic, copy paste, HSV, flip, and perspective settings during training on the overhead view datasets.
+
+\subsection{Laser Reflection Ablation}
+\label{sec:ablation-method}
+The overhead captures contain a bright specular return at the probe tip alongside the LED glow that carries the class label. Because the return co-occurs with the LED, a detector could in principle key on the return rather than on the color that encodes moisture, which would not transfer to a deployment in which the return is absent or displaced. We therefore built a matched three-arm dataset family to test whether the return is load-bearing.
+
+The return is located per frame by a scale-adaptive detector rather than a fixed threshold. Each pixel is scored for return-likeness as the product of membership in a per-dataset hue range, saturation, and value; the score map is smoothed, its peak is taken as the seed, and the region is grown to all connected pixels above $0.25\times$ the peak score, subject to a hard radius cap of 150~px. Because the overexposed center of a bright spot loses its hue, white low-saturation components touching the grown region are added back. Fixed-threshold variants were rejected during development because they masked pebbles and background fabric.
+
+Three arms were then built from identical source frames and identical label files. The \emph{laser} arm is the unmodified data. The \emph{no-laser} arm inpaints the detected region from surrounding pixels. Inpainting leaves a visible smear, so a drop in the no-laser arm alone would be ambiguous between ``the return mattered'' and ``the network dislikes edited images''. The \emph{sham} arm resolves this: it applies an inpainting scar of matched size and shape at a displaced location and leaves the return intact. Every arm was trained from COCO initialization under identical hyperparameters for three random seeds, and we report best validation mAP@0.5 as mean~$\pm$~s.d. over seeds.
+
+Three datasets were used: \texttt{UV-Soil-Only-Target} (142 training images), \texttt{UV-Soil-Only-Baseline} (246), and \texttt{UV-Combined} (292). \texttt{IR-Soil-Only} was excluded because its return is not separable from the soil, with measured hue 97 against a background of 90 and saturation near 108 against 170 to 250 in the other collections, so a color-based detector ``finds'' a return in every frame by masking background fabric.
+
+\subsection{Detection Architecture}
+YOLOv5s \cite{jocher2020yolov5}, a CSPDarknet53 backbone with a PANet feature pyramid neck and three detection heads at strides 8, 16, and 32~px and 7.2~M parameters, was adopted across all experiments at a fixed $640 \times 640$~px input resolution. Larger variants (YOLOv5m, l, x) were evaluated in pilot runs and overfit in the under 50 images per class regime of the primary dataset. The smallest member of the family provides the strongest implicit regularization without measurable accuracy loss on the larger pooled and modality datasets.
+
+\subsection{The Three Stage Training Protocol}
+All experiments ran on a research cluster (NVIDIA RTX~2080Ti, 11~GB VRAM, CUDA~12.4), with selected larger pooled runs migrated to an A100 partition. Optimization used AdamW with a cosine learning rate schedule, batch size 32, image size $640 \times 640$, and early stopping patience of 100 epochs over a 200 epoch budget. The three stages address distinct hypotheses about where accuracy comes from on this task.
+
+\emph{Stage 1: Baseline.} Each of the seven datasets is trained independently from COCO pretrained weights (\texttt{yolov5s.pt}). The custom \texttt{hyp.stir-soil.yaml} is applied to overhead view datasets (\texttt{Mixed Color and Background}, \texttt{UV-Soil-Only-Baseline}, \texttt{UV-Soil-Only-Target}); other datasets use default YOLOv5 hyperparameters. Under this recipe the \texttt{Mixed Color and Background} baseline overfits (Section~\ref{sec:dynamics}); the Stage~1 model reported for it is therefore retrained with label smoothing of 0.1, AdamW weight decay of 0.05, an initial learning rate of $3 \times 10^{-3}$ rather than $10^{-2}$ and a 100-epoch cosine schedule, chosen by the sweep of Section~\ref{sec:stir-reg}.
+
+\emph{Stage 2: Pooled training.} The two pooled datasets are trained from COCO weights under identical settings, testing whether label compatible pooling alone produces measurable gains.
+
+\emph{Stage 3: Domain specific fine-tuning.} Five targets, including both pooled datasets and \texttt{IR-Soil-Only}, \texttt{UV-Soil-Only-Target}, and \texttt{Mixed Color and Background}, are fine-tuned from the strongest Stage~1 soil moisture checkpoint, selected automatically by scanning baseline result files for peak mAP@0.5 (the chosen source was \texttt{IR-Pot-Background}, $\text{mAP@0.5}=0.804$). The hypothesis is that the soil moisture weight space is closer to the target task than COCO, so feature detectors for small glowing spots against soil clutter, and the classifier's spatial priors, transfer with minimal adaptation. Fig.~\ref{fig:threestage} depicts the protocol. Under this recipe the \texttt{Mixed Color and Background} fine-tune overfits (Section~\ref{sec:dynamics}); the Stage~3 model reported for it is therefore retrained with label smoothing of 0.1, AdamW weight decay of 0.05, an initial learning rate of $3 \times 10^{-4}$ and a 60-epoch cosine schedule, chosen by the sweep of Section~\ref{sec:stir-reg}.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=0.85\columnwidth]{figs/fig3_three_stage_training.png}
+\caption{The three-stage protocol, initialized from ImageNet/COCO weights. Stage I trains seven datasets independently: the 11-class UV-Soil-Only-Baseline and its infrared IR-Soil-Only and ultraviolet UV-Soil-Only-Target counterpart, the 5-class infrared IR-Pot-Background (transfer source), the ultraviolet UV-Pot-Background, the 11-class outdoor UV-Strawberry-Pot, and the primary Mixed Color and Background (56 originals, 1157 frames after expansion). Stage II adds the pooled UV-Combined (UV-Soil-Only-Baseline + UV-Strawberry-Pot) and IR-Combined (UV-Pot-Background + IR-Pot-Background). Stage III fine-tunes the five targets from the best soil-moisture checkpoint to produce the final detector. Parenthetical tags give each dataset's class count.}
+\label{fig:threestage}
+\end{figure}
+
+\section{Results}
+\label{sec:results}
+
+\subsection{Training Dynamics and Overfitting}
+\label{sec:dynamics}
+Training loss descended smoothly from COCO initialization in all twelve runs, confirming stable optimization. Whether that descent was accompanied by memorization is a separate question, and validation mAP cannot answer it: a converged model and a memorizing one both report a high number. The discriminating statistic is the trajectory of validation classification loss, which turns upward once a model begins fitting the training frames rather than the signal they carry. We report classification loss specifically because the task is reading a level off the probe; box and objectness losses record only whether the probe was found.
+
+Two properties of the logs constrain how the curves may be read. Training loss is accumulated over augmented batches while validation loss is computed on unaugmented frames, so the two are not on a common scale and the vertical distance between them is not a generalization gap; only the shape of each curve carries evidence. Separately, the first few dozen epochs produce validation-loss excursions one to four orders of magnitude above the settled range, which reflect a COCO-initialized classifier reorganizing confidence mass from natural-scene categories onto LED hue categories rather than any property of fit. We therefore locate each run's validation minimum over epochs 50 to 200.
+
+Ten of the twelve runs show no overfitting (Fig.~\ref{fig:overfit}, Table~\ref{tab:overfit}). Nine of them reach their lowest validation classification loss between epochs 129 and 199 and end the budget within 7\% of that minimum; six reach it in the final three epochs, so for those the 200-epoch budget is a stopping point rather than a converged optimum. \texttt{IR-Soil-Only} at Stage~1 is the loosest of the ten, ending 28\% above a minimum at epoch 159, though its trend over the post-warm-up window is still downward and its validation split shares capture bursts with training in any case. This is the expected consequence of augmentation being applied online at every epoch: geometric diversity, photometric perturbation and a hue perturbation of $\pm 7.2^{\circ}$ at Stage~1 and $\pm 5.4^{\circ}$ at Stage~3, both inside the $\pm 8^{\circ}$ crossover cap established in Section~\ref{sec:method}, mean the network does not see the same frame twice, and training classification loss for these runs settles between $8.5 \times 10^{-3}$ and $3.2 \times 10^{-2}$ rather than collapsing toward zero. Augmentation is doing the regularizing it was adopted to do.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\columnwidth]{figs/fig9_overfitting.pdf}
+\caption{Validation (top) and training (bottom) classification loss, Stage~1 (left) and Stage~3 (right), on logarithmic axes. Markers give each run's lowest validation loss after epoch 50. Ten runs descend or flatten. The original stir-probe runs of both stages (dashed) turn upward while their training loss falls well below every other run. The retrained runs (solid; mean of three seeds, band spanning them) do not: their validation loss, rescored every five epochs without label smoothing so that it shares the scale of the other runs, falls throughout the 100-epoch Stage~1 budget and falls and then holds flat at Stage~3. Label smoothing also places a floor under their training loss, about 0.013 at Stage~1 and 0.025 at Stage~3.}
+\label{fig:overfit}
+\end{figure}
+
+\begin{table}[!t]
+\renewcommand{\arraystretch}{1.3}
+\caption{Overfitting Diagnostic: Validation Classification Loss and mAP@0.5 Over the Training Budget}
+\label{tab:overfit}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{l c c c c}
+\toprule
+\textbf{Run} & \textbf{Min.\ ep.} & \textbf{Final/min.} & \textbf{mAP peak} & \textbf{mAP final} \\
+\midrule
+\multicolumn{5}{l}{\emph{Stage 1}} \\
+IR-Pot-Background & 199 & $1.01$ & 0.804 & 0.761 \\
+UV-Pot-Background & 192 & $1.00$ & 0.587 & 0.528 \\
+UV-Soil-Only-Baseline & 198 & $1.07$ & 0.759 & 0.670 \\
+UV-Soil-Only-Target & 199 & $1.03$ & 0.612 & 0.487 \\
+IR-Soil-Only & 159 & $1.28$ & 0.550 & 0.294 \\
+UV-Strawberry-Pot & 129 & $1.03$ & 0.716 & 0.562 \\
+Mixed Color and Background & 54 & $\mathbf{1.61}$ & 0.683 & 0.440 \\
+\quad retrained (3 seeds) & 75 & $1.10$ & 0.620 & 0.556 \\
+\midrule
+\multicolumn{5}{l}{\emph{Stage 3}} \\
+IR-Combined & 189 & $1.02$ & 0.995 & 0.995 \\
+IR-Soil-Only & 199 & $1.02$ & 0.987 & 0.987 \\
+UV-Combined & 198 & $1.01$ & 0.955 & 0.953 \\
+UV-Soil-Only-Target & 199 & $1.01$ & 0.912 & 0.845 \\
+Mixed Color and Background & 57 & $\mathbf{1.69}$ & 0.711 & 0.480 \\
+\quad retrained (3 seeds) & 34 & $1.08$ & 0.635 & 0.566 \\
+\bottomrule
+\end{tabular}
+\\[2pt]
+\parbox{\columnwidth}{\footnotesize Minimum epoch and ratio refer to validation classification loss, the minimum taken over epochs 50 to 200 and the final value as the mean of the last ten epochs. mAP peak is the best-epoch figure reported in Tables~\ref{tab:baseline} and~\ref{tab:best}; mAP final is the last-ten-epoch mean. All runs cover 200 epochs except the original Stage~3 stir-probe run, which terminated at epoch 171, and the two retrained runs (Section~\ref{sec:stir-reg}), with budgets of 100 epochs at Stage~1 and 60 at Stage~3. For those the values are means over three seeds (final/min.\ 1.08 to 1.12 at Stage~1, 1.04 to 1.16 at Stage~3), the Stage~3 minimum is taken over all epochs, and validation loss is logged against label-smoothed targets, so only their ratios, not their levels, are comparable with the other rows.}
+\end{table}
+
+The stir-probe runs are the exception, and they are the exception in both stages. Validation classification loss bottoms at epoch 54 in Stage~1 and epoch 57 in Stage~3, then rises over the remainder of the budget to end $1.61\times$ and $1.69\times$ above those minima. Training classification loss over the same span falls to $4.3 \times 10^{-4}$ at Stage~1, a factor of 20 below the lowest value reached by any other run in the study, and to $3.5 \times 10^{-3}$ at Stage~3, the lowest of that stage. Validation mAP follows: it peaks at epoch 101 in Stage~1 and epoch 32 in Stage~3 and decays thereafter, ending at 0.440 and 0.480 against peaks of 0.683 and 0.711. Three independent signatures, a rising validation loss, a collapsing training loss and a decaying validation mAP, agree, which is the classical picture of a network fitting its training frames. Section~\ref{sec:stir-reg} retrains both runs under explicit regularization, a lower learning rate and a shorter schedule, and the turn disappears in both.
+
+A caveat limits where this diagnostic has force. Validation loss can only detect memorization when the validation frames are independent of training; where they share a capture burst, validation is measured on near-duplicates of the training data and a memorizing model scores as well as a generalizing one. Grouping every frame of every split into capture bursts by pixel similarity shows that this describes the soil-only family: 69 of the 70 validation frames of \texttt{UV-Soil-Only-Baseline} sit in a burst that training has already seen, and for \texttt{UV-Soil-Only-Target} and \texttt{IR-Soil-Only} the overlap is complete. The flat curves of those three runs are therefore not evidence of good generalization; the loss curve is blind on those collections, and a cross-burst experiment rather than the curve is what speaks to them. The collections with genuinely independent validation are the two pot-background captures, which show no overfitting, and the stir-probe capture, which does.
+
+As an independent post-training check that requires no retraining, we examined the calibration of each Stage~1 detector, on the premise that a network which has memorized its training frames is confidently wrong on unseen ones. For every image we retained the single highest-confidence detection and scored it correct when its class matched the label and its box overlapped the labelled spot at IoU~$\geq 0.5$, evaluating both the best-epoch and the final checkpoint of all seven collections on their training, validation and test splits. The original stir-probe detector is the only one to commit high-confidence errors: at its final checkpoint 12 of its 99 validation errors and 4 of its 41 test errors carry a confidence above 0.9, and its mean validation confidence on wrong predictions (0.80) is nearly that on correct ones (0.86), so its confidence no longer separates right from wrong. The effect strengthens from the best-epoch to the final checkpoint (1 of 88 validation errors and none of 47 test errors above 0.9 at the best epoch), tracking the post-epoch-54 collapse in Table~\ref{tab:overfit}, and it coincides with the largest train-to-held-out gap in the study, a top-1 accuracy of 0.96--0.97 on training frames against 0.51--0.57 on validation and test. No other run produced an error above a confidence of 0.71 on any split. That result should not be overread: these detectors are underconfident throughout, fewer than one top detection in ten exceeding 0.6, so they satisfy the high-confidence criterion without demonstrating good calibration, and expected calibration error, which ranged from 0.04 to 0.38 with overlapping bootstrap intervals, did not discriminate between runs. As with the loss curves, a null result carries little weight on the soil-only family, whose held-out frames are burst-overlapped with training, and most test splits hold only 10 to 35 frames. The calibration test thus corroborates the loss-curve diagnosis by an independent route, singling out the same collection and the same checkpoint, rather than adding evidence for the remaining runs.
+
+\subsection{Baseline Performance}
+Stage~1 mAP@0.5 spanned 0.55 to 0.80 across the seven datasets (Table~\ref{tab:baseline}). \texttt{IR-Pot-Background} led at 0.804, followed by \texttt{UV-Soil-Only-Baseline} (0.760) and \texttt{UV-Strawberry-Pot} (0.716). The original stir probe baseline of 0.683 exceeded the 0.5 detection threshold despite only 39 original training frames (858 after expansion), but it is a pre-collapse peak on a sparse validation split (Section~\ref{sec:dynamics}). The retrained baseline of Section~\ref{sec:stir-reg}, which Table~\ref{tab:baseline} reports, reaches $0.620 \pm 0.042$ and does not collapse. The IR and smaller UV captures, namely IR-Soil-Only (0.550) and UV-Soil-Only-Target (0.612), substantially trailed UV-Soil-Only-Baseline despite identical sensor and labeling protocol. We attribute this to smaller per class training counts and partial class subset coverage rather than any intrinsic disadvantage of IR or UV imaging; both recover strongly under fine tuning. Fig.~\ref{fig:baseline} shows the per dataset baselines.
+
+\begin{table}[!t]
+\renewcommand{\arraystretch}{1.3}
+\caption{Baseline (Run 1) Performance per Dataset}
+\label{tab:baseline}
+\centering
+\begin{tabular}{l c c}
+\toprule
+\textbf{Dataset} & \textbf{mAP@0.5} & \textbf{mAP@0.5:0.95} \\
+\midrule
+IR-Pot-Background & 0.80 & 0.56 \\
+UV-Soil-Only-Baseline & 0.76 & 0.49 \\
+UV-Strawberry-Pot & 0.71 & 0.36 \\
+Mixed Color and Background & 0.62$^{a}$ & 0.28 \\
+UV-Soil-Only-Target & 0.61 & 0.38 \\
+UV-Pot-Background & 0.58 & 0.38 \\
+IR-Soil-Only & 0.54 & 0.19 \\
+\bottomrule
+\end{tabular}
+\\[2pt]
+\parbox{\columnwidth}{\footnotesize $^{a}$Retrained Stage~1 run of Section~\ref{sec:stir-reg}, mean over three seeds of each seed's best epoch (standard deviation 0.04). It replaces the original run's pre-collapse peak of 0.68 (mAP@0.5:0.95 0.24), which ended at 0.44.}
+\end{table}
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\columnwidth]{figs/_fig4_view.png}
+\caption{Best validation mAP@0.5 of each of the seven Stage~1 (COCO-initialized) runs; the dashed line marks 0.5. Bars are the best epoch, the ``mAP peak'' column of Table~\ref{tab:overfit}. The Mixed Color and Background bar is the retrained run of Section~\ref{sec:stir-reg}, the mean of its three seeds' peaks with their standard deviation; the original run's pre-collapse peak was 0.683.}
+\label{fig:baseline}
+\end{figure}
+
+\subsection{Stage 2: Pooled Training}
+Pooling sharply changed performance for the two configurations. The ultraviolet pool \texttt{UV-Combined} reached $\text{mAP@0.5}=0.942$ ($\text{mAP@0.5{:}0.95}=0.643$), substantially exceeding the standalone UV-Soil-Only-Baseline baseline (0.760) and confirming that cross-session exposure during a single training run improves ultraviolet generalization even from COCO weights. The IR-combined pool, in contrast, reached only 0.591, below the standalone \texttt{IR-Pot-Background} baseline (0.804). Naive pooling of a strong and a weaker label-compatible IR set therefore did not benefit the stronger component from COCO initialization; the recovery emerges only after fine-tuning. The asymmetric pooling outcome, additive for ambient visible light and sub-additive for IR, is one of the stronger empirical findings of this study, and it argues against generic ``more data is better'' pooling heuristics for label-compatible sets.
+
+\subsection{Stage 3: Domain Specific Fine Tuning}
+Fine tuning from the \texttt{IR-Pot-Background} baseline checkpoint (selected automatically as the strongest Stage~1 source) lifted every target into the high accuracy regime (Table~\ref{tab:best}). Six of the seven datasets, all but the stir probe primary, exceeded $\text{mAP@0.5}=0.91$ under the fine-tuned configuration. The IR-combined pool reached 0.995 (the highest single result in the study), IR-Soil-Only reached 0.987 (a $+43.9$ point gain over its own COCO baseline, the largest absolute single dataset gain observed), and the UV-Combined pool reached 0.955.
+
+\begin{table}[!t]
+\renewcommand{\arraystretch}{1.3}
+\caption{Best mAP@0.5 Across All Training Runs per Dataset}
+\label{tab:best}
+\centering
+\begin{tabular}{l c c c c}
+\toprule
+\textbf{Dataset} & \textbf{Run 1} & \textbf{Run 2} & \textbf{Run 3} & \textbf{Best} \\
+\midrule
+UV-Soil-Only-Baseline & 0.75 & 0.94 & 0.95 & 0.96 \\
+IR-Soil-Only & 0.54 & 0.00 & 0.99 & 0.99 \\
+UV-Soil-Only-Target & 0.61 & 0.00 & 0.91 & 0.91 \\
+IR-Pot-Background & 0.80 & 0.59 & 1.00 & 1.00 \\
+UV-Pot-Background & 0.58 & 0.59 & 1.00 & 1.00 \\
+UV-Strawberry-Pot & 0.71 & 0.94 & 0.96 & 0.96 \\
+Mixed Color and Background & 0.62$^{a}$ & 0.00 & 0.64$^{a}$ & 0.64 \\
+\bottomrule
+\end{tabular}
+\\[2pt]
+\parbox{\columnwidth}{\footnotesize $^{a}$Retrained Stage~1 and Stage~3 runs of Section~\ref{sec:stir-reg}, means of the three seeds' peaks (standard deviation 0.04 and 0.03). They replace the original runs' pre-collapse peaks of 0.68 and 0.71, which ended at 0.44 and 0.48; on the held-out test split the retrained runs score 0.673 and 0.741 against 0.577 and 0.540.}
+\end{table}
+
+The mAP@0.5:0.95 metric in the fine-tuned runs reached 0.59 to 0.70 (versus 0.19 to 0.56 baselines), with UV-Soil-Only-Target at 0.685, IR-Soil-Only at 0.586, the IR-Combined pool at 0.593, and the UV-Combined pool at 0.696. These strict-IoU localization improvements are consistent with the hypothesis that domain specific weights already encode spatial priors for LED tip placement.
+
+The fine-tuned validation curves were qualitatively distinct from the baselines: the early classification loss spikes that characterize COCO-initialized multiclass runs (about 20 for IR-Soil-Only, about 100 for UV-Soil-Only-Target) were absent, validation classification loss descended monotonically from epoch 1, and the IR-family fine-tuned models reached 95\% of peak mAP@0.5 within about 50 epochs against 100 to 150 for their baseline counterparts. This is mechanistically grounded: COCO weights encode feature detectors for natural scene objects whose representations must reorganize before discriminating LED hues, while domain specific weights begin near the target geometry, with the classifier head initialized close to optimum. Fig.~\ref{fig:best} summarizes the per-dataset best results.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\columnwidth]{figs/_fig5_view.png}
+\caption{Best validation mAP@0.5 of each Stage~3 (fine-tuned) run; the dashed line marks 0.5. Bars are the best epoch, the ``mAP peak'' column of Table~\ref{tab:overfit}. The Mixed Color and Background bar is the retrained run of Section~\ref{sec:stir-reg}, the mean of its three seeds' peaks with their standard deviation; the original run's pre-collapse peak was 0.711.}
+\label{fig:best}
+\end{figure}
+
+\subsection{Effect of Class Preserving Augmentation on the Stir-Probe Dataset}
+The original Stage~1 and Stage~3 results of 0.683 and 0.711 for Mixed Color and Background were trained on the expanded set of Table~\ref{tab:aug}, 858 training and 204 validation frames from 39 and 12 originals. A further run (stir5) on the same expanded set reached $\text{mAP@0.5}=0.625$. It differs from the 0.711 run in its starting point, the Stage~1 \texttt{UV-Soil-Only-Baseline} checkpoint rather than \texttt{IR-Pot-Background}, and in its hyperparameters, \texttt{hyp.stir-soil.yaml} at a tenfold higher initial learning rate rather than the fine-tuning file, and it was still improving when it stopped at epoch 161, its best epoch. The gap therefore cannot be attributed to augmentation or to data content; no run in this study compares the expanded set against the 56 originals alone.
+
+\subsection{Why Augmentation Did Not Prevent Memorization Here}
+\label{sec:aug-limits}
+That the one overfitting collection is also the most heavily augmented one is not a contradiction but a statement about what augmentation supplies. The stir-probe training split contains 858 frames generated from 39 original photographs at 21 copies each, and its validation split contains 204 frames from 12 originals. Augmentation multiplied the frame count by a factor of 22 and the number of distinct scenes by one. A policy that perturbs geometry and photometry prevents a network from keying on the exact pixel arrangement of a frame, which is why the runs in Table~\ref{tab:overfit} whose collections resolve into 20 to 99 distinct capture bursts stay flat for 200 epochs; it does not prevent a network from learning the 39 scenes themselves, together with whatever incidental properties distinguish them, once it has seen each several thousand times. The useful measure of a training set is its count of independent scenes, and by that measure the stir-probe split is the smallest in the study despite having the largest frame count.
+
+The obvious alternative explanation, that the model reads the burned-in ``Moisture: \emph{N}'' overlay rather than the LED, is excluded by the masking experiment of Section~\ref{sec:ablation-results}: blanking the overlay moves stir-probe accuracy by $+0.010$ at Stage~1 and $-0.008$ at Stage~3, both inside the re-encoding noise floor. What the curves establish is the fact of memorization and its timing; which incidental property is being memorized is not settled by them, and the held-out 95-frame test split is too small to settle it. Scored at $\text{mAP@0.5}$, it gives 0.552 for the Stage~3 best-fitness checkpoint and 0.540 for the final one, but its frames derive from only five originals, one of which shares a capture burst with training. The cross-validation of Section~\ref{sec:stir-cv} replaces that test with one over all 56 originals.
+
+Two practical consequences follow. First, the stir-probe figure of 0.683 in Table~\ref{tab:baseline} and the original Stage~3 peak of 0.711 are peak-epoch values read from the validation log rather than converged accuracies, and should be read together with the 0.440 and 0.480 the same runs end at. No saved checkpoint corresponds to either peak, because YOLOv5 retains the checkpoint of best combined fitness (epochs 133 and 70) rather than of best $\text{mAP@0.5}$. The retrained runs of Section~\ref{sec:stir-reg}, and for Stage~3 the cross-validated estimate of Section~\ref{sec:stir-cv}, supersede both. Second, the remaining eleven runs are not overtrained at 200 epochs and most were still improving when the budget expired, so the budget is a limit of this study rather than a converged optimum, and a longer schedule is the cheapest available improvement.
+
+\subsection{Regularized Retraining of the Stir-Probe Runs}
+\label{sec:stir-reg}
+The fine-tuning recipe of the original Stage~3 run carries almost no explicit regularization: AdamW with a decoupled weight decay of $5 \times 10^{-4}$, no label smoothing, and a 200-epoch cosine schedule. We retrained the run from the same \texttt{IR-Pot-Background} initialization on the same shipped split, changing one factor family at a time: label smoothing of 0.1, weight decay raised to 0.05, the initial learning rate lowered from $10^{-3}$ to $3 \times 10^{-4}$, and the schedule shortened to 100, 60 or 50 epochs. Each recipe was trained with three seeds and early stopping disabled, so every curve covers its full budget. Because YOLOv5 computes validation loss against the same smoothed targets it trains on, a checkpoint saved every five epochs was rescored on the validation split with smoothing off, which puts every recipe on the scale of the original run.
+
+\begin{table}[!t]
+\renewcommand{\arraystretch}{1.3}
+\caption{Regularization Sweep for the Stir-Probe Runs}
+\label{tab:stirreg}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{l c c c}
+\toprule
+\textbf{Recipe} & \textbf{Epochs} & \textbf{Final/min.} & \textbf{Test mAP@0.5} \\
+\midrule
+\multicolumn{4}{l}{\emph{Stage 3 (lr0 $10^{-3}$ unless stated)}} \\
+Original & 200 & 2.47 & 0.540 \\
+Weight decay 0.05 & 200 & 2.26 & 0.606 \\
+Label smoothing 0.1 (LS) & 200 & 1.55 & 0.598 \\
+LS + weight decay & 200 & 1.69 & 0.598 \\
+LS + weight decay & 50 & 1.16 & 0.617 \\
+LS + weight decay + lr0 $3 \times 10^{-4}$ & 200 & 1.39 & 0.719 \\
+\quad same & 100 & 1.21 & 0.687 \\
+\quad same, LS 0.2 & 100 & 1.11 & 0.730 \\
+\quad same & 60 & $\mathbf{1.05}$ & $\mathbf{0.741}$ \\
+\midrule
+\multicolumn{4}{l}{\emph{Stage 1 (lr0 $10^{-2}$ unless stated)}} \\
+Original & 200 & 1.66 & 0.577 \\
+LS + weight decay & 200 & 1.36 & 0.595 \\
+LS + weight decay + lr0 $10^{-3}$ & 200 & 1.28 & 0.631 \\
+\quad same & 100 & 1.09 & 0.615 \\
+\quad same & 60 & 1.01 & 0.514 \\
+LS + weight decay + lr0 $3 \times 10^{-3}$ & 100 & $\mathbf{1.03}$ & $\mathbf{0.673}$ \\
+\bottomrule
+\end{tabular}
+\\[2pt]
+\parbox{\columnwidth}{\footnotesize Final/min.\ is the unsmoothed validation classification loss at the last checkpoint over its lowest value, both over all epochs; Test mAP@0.5 is the last checkpoint on the 95-frame test split. Rows other than the originals are means of three seeds (seed standard deviation 0.02 to 0.23 for the ratio, 0.01 to 0.12 for test mAP@0.5). At Stage~1 the minimum skips checkpoints before validation mAP@0.5 first reaches 0.1, while the COCO-initialized detector still predicts almost nothing. The original runs' ratios are from their logged curves; the Stage~3 one ended at epoch 171, and the Stage~1 minimum is taken over epochs 50 to 200 as in Table~\ref{tab:overfit}.}
+\end{table}
+
+Weight decay alone leaves the turn in place (Table~\ref{tab:stirreg}), and label smoothing halves the final loss but does not remove the rise. With all three changes the validation loss stays flat until about epoch 90 and then climbs, so the schedule, not the absence of regularization alone, drives the late rise. The 60-epoch version of that recipe removes it: validation classification loss falls from 0.058 to about 0.043 and holds there on all three seeds, ending 1.05 times its minimum against 2.47 for the original run, and the original run had already risen 1.69-fold over the same first 60 epochs. Its held-out test $\text{mAP@0.5}$ is $0.741 \pm 0.011$ against 0.540. On the 12-original validation split the picture is noisier: its best-epoch $\text{mAP@0.5}$ is $0.635 \pm 0.030$ and its last-ten-epoch mean $0.566 \pm 0.046$, lower than the original run's single best epoch of 0.711 but without the original's fall to 0.480. The third seed's logged validation loss ends 15\% above its minimum at epoch 41, so the residual drift is small but not zero. This recipe is the Stage~3 model reported in Tables~\ref{tab:best} and~\ref{tab:overfit} and Fig.~\ref{fig:best}, and Section~\ref{sec:stir-cv} tests it on independent scenes.
+
+The Stage~1 run differs in its starting point, COCO weights, and in its recipe, \texttt{hyp.stir-soil.yaml}, whose AdamW initial learning rate of $10^{-2}$ is ten times the fine-tuning value. Its validation loss after epoch 50 does not so much turn as swing, between 0.035 and 0.087 from one epoch to the next, and adding label smoothing and weight decay at that learning rate leaves the ratio at 1.36 (Table~\ref{tab:stirreg}). Lowering the learning rate is what removes it. At $3 \times 10^{-3}$ on a 100-epoch schedule the rescored validation classification loss falls from about 0.033 to 0.024 on all three seeds and ends 1.03 times its minimum, and training loss settles at $1.4 \times 10^{-2}$ rather than $4.3 \times 10^{-4}$. Validation $\text{mAP@0.5}$ is still rising at the last epoch; its best epoch is $0.620 \pm 0.042$ against the original run's single best epoch of 0.683, and its held-out test $\text{mAP@0.5}$ is $0.673 \pm 0.044$ against 0.577 for the original final checkpoint. At $10^{-3}$ a 200-epoch schedule gives the highest validation peak of the sweep (0.784) but turns upward again, and a 60-epoch schedule is flat only because it stops before the network has learned the task (test 0.514). As for Stage~3, single-checkpoint validation $\text{mAP@0.5}$ of the chosen recipe ends 0.036 below its best, inside the checkpoint-to-checkpoint swing of about 0.05 on 12 validation originals. This recipe is the Stage~1 model reported in Tables~\ref{tab:baseline}, \ref{tab:best} and~\ref{tab:overfit} and Fig.~\ref{fig:baseline}; it has not been cross-validated.
+
+\subsection{Grouped Cross-Validation of the Stir-Probe Recipe}
+\label{sec:stir-cv}
+To obtain an estimate that neither rests on 12 validation originals nor selects a checkpoint on the frames it reports, we pooled all 56 stir-probe originals and cross-validated over them. Pixel-similarity grouping places the 56 originals in 42 capture bursts, five of which straddle the shipped train, validation and test boundaries, so that 3 of the 12 shipped validation originals and 1 of the 5 test originals have a burst sibling in training. Bursts, each carrying its originals and all their augmented copies, were dealt into five folds stratified by level, so that every held-out fold spans all five levels and no held-out frame has a burst sibling in training. Two arms were trained on every fold with three seeds each: the Stage~3 recipe of Table~\ref{tab:best} unchanged, initialized from \texttt{IR-Pot-Background} with the same hyperparameters, the same recipe with the ten backbone layers frozen, and the retrained recipe of Section~\ref{sec:stir-reg} on its own 60-epoch schedule. Each of the first two arms trained for a fixed 100 epochs on a cosine learning-rate schedule with early stopping disabled and saved a checkpoint every ten epochs; every checkpoint was scored on its held-out fold by the top-1 protocol of Section~\ref{sec:dynamics}, giving an out-of-fold learning curve over the 56 originals.
+
+\begin{table}[!t]
+\renewcommand{\arraystretch}{1.3}
+\caption{Grouped Five-Fold Cross-Validation of the Stir-Probe Recipe}
+\label{tab:stircv}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{l c c c c c c}
+\toprule
+\textbf{Arm} & \textbf{Ep.~10} & \textbf{Ep.~30} & \textbf{Ep.~50} & \textbf{Final} & \textbf{mAP@0.5} & \textbf{ECE} \\
+\midrule
+Full fine-tune & 0.39 & 0.73 & 0.83 & 0.83 & 0.778 & 0.063 \\
+Frozen backbone & 0.28 & 0.33 & 0.36 & 0.31 & 0.258 & 0.351 \\
+Retrained & 0.35 & 0.72 & 0.83 & 0.85 & 0.760 & 0.081 \\
+\bottomrule
+\end{tabular}
+\\[2pt]
+\parbox{\columnwidth}{\footnotesize Out-of-fold top-1 accuracy over the 56 originals, mean of three seeds (seed standard deviation 0.02 to 0.09). Final is epoch 99, or epoch 59 for the retrained arm. mAP@0.5 is the mean held-out value at the final epoch across folds and seeds, augmented copies included; ECE is computed over all held-out frames at the final epoch.}
+\end{table}
+
+The unfrozen recipe reaches an out-of-fold accuracy of 0.83 by epoch 50 and holds it to the end of the schedule (Table~\ref{tab:stircv}): 0.833 at epoch 99, with a 95\% interval of 0.72 to 0.93 from resampling whole bursts, and a mean held-out $\text{mAP@0.5}$ of 0.778. No late-epoch decay appears; accuracy over epochs 50 to 99 stays between 0.81 and 0.83. Its confidence also separates right from wrong. None of the 28 errors made on originals across the three seeds, and 1.6\% of the errors over all held-out frames, carries a confidence above 0.9; mean confidence is 0.82 on correct and 0.58 on wrong predictions, and expected calibration error is 0.063. Freezing the backbone fails, plateauing at 0.31 to 0.36 with an expected calibration error of 0.351, which is consistent with the \texttt{IR-Pot-Background} backbone needing to adapt to ultraviolet imagery that a retrained head alone cannot accommodate.
+
+The cross-validated recipe therefore does not reproduce the collapse of the shipped run, which peaked at 0.711 and ended at 0.480 on 12 validation originals over 200 epochs. The design does not separate the two candidate causes: the longer schedule, under which the learning rate at epoch 55, where the collapse begins, is about twice its value under the 100-epoch schedule, and the small, partly leaked validation split on which the collapse was observed. What it does establish is that the memorization described in Section~\ref{sec:aug-limits} is not an inevitable property of the collection under this recipe. Two weaknesses of the unregularized recipe remain, and the retrained recipe narrows both. The spread across folds (standard deviation 0.165, worst fold 0.61) is six times the spread across seeds, so the burst-resampled interval rather than the seed spread is the honest uncertainty. And level~1 reaches only 0.50, its errors predominantly assigned to level~8, while level~8 itself scores 1.00; level~1 is the dimmest LED state and its eight originals come from few bursts, the same scarcity of independent scenes that underlies this section. Top-1 accuracy is not commensurable with the $\text{mAP@0.5}$ figures of Tables~\ref{tab:baseline} and~\ref{tab:best}, and each fold trains on about 45 originals rather than the 39 of the shipped split.
+
+The retrained recipe matches the unregularized one on independent scenes: out-of-fold accuracy $0.845 \pm 0.057$ over seeds at epoch 59, still rising at the end of its schedule, with a 95\% interval of 0.77 to 0.92 from resampling whole bursts and a mean held-out $\text{mAP@0.5}$ of 0.760. Its spread across folds is smaller (standard deviation 0.095 against 0.165, worst fold 0.70 against 0.61), and level~1 rises from 0.50 to 0.71. Label smoothing lowers its confidence on correct predictions (mean 0.72 against 0.82), which raises expected calibration error slightly, to 0.081, while the share of held-out errors made above 0.9 confidence falls from 1.6\% to 0.2\%. The difference from the unregularized recipe, 0.012, is less than one original in 56, so the regularization that removes the loss turn costs no measurable accuracy.
+
+\subsection{Illumination and Training Volume}
+The soil-only family comprises three captures of an identical pot configuration: two under ultraviolet illumination, of 246 and 142 training images over the same 11 levels, and one under infrared, of 104 images covering 7 of those levels (Table~\ref{tab:modality}). It therefore separates illumination from training volume rather than confounding them.
+
+Under COCO baselines the two ultraviolet captures differ by 0.148 (0.760 against 0.612) despite identical illumination, an identical class taxonomy, and the same rig. The only systematic difference between them is volume, 22.4 against 12.9 training images per level. The infrared capture is lowest at 0.550 and also spans a reduced label set, so its baseline is not comparable to either. Baseline accuracy on this collection is thus a measure of how much labelled data a dataset carries, not of what its illumination reveals.
+
+After fine-tuning from the strongest shared checkpoint the picture changes: infrared reaches the highest $\text{mAP@0.5}$ at 0.99, and the two ultraviolet captures reach 0.96 and 0.91, all three clearing the 0.91 deployment-grade threshold. Strict-IoU scores fall within a narrow band of 0.59 to 0.70, which we do not read as a reliable ordering at this sample size.
+
+\begin{table}[!t]
+\renewcommand{\arraystretch}{1.3}
+\caption{Soil-Only Family: Illumination, Volume, and Accuracy}
+\label{tab:modality}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{l c c c c c}
+\toprule
+\textbf{Dataset} & \textbf{Train} & \textbf{nc} & \textbf{Base} & \textbf{Best} & \textbf{Best} \\
+ & & & \textbf{@0.5} & \textbf{@0.5} & \textbf{@0.5:0.95} \\
+\midrule
+UV-Soil-Only-Baseline & 246 & 11 & 0.76 & 0.96 & 0.70 \\
+UV-Soil-Only-Target & 142 & 11 & 0.61 & 0.91 & 0.69 \\
+IR-Soil-Only & 104 & 7 & 0.55 & 0.99 & 0.59 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Confusion Matrix Analysis}
+\emph{Baseline Mixed Color and Background (original run).} Off diagonal mass concentrates among adjacent levels in the blue violet range (7, 8, 10), reflecting their physical visual similarity. On the shipped validation split every level 1 (red orange) frame is classified correctly, as its dominant wavelength being maximally distinct from the other classes would predict, but those frames derive from only two originals; under the grouped cross-validation of Section~\ref{sec:stir-cv}, over all eight level 1 originals, level 1 is instead the weakest level at 0.50 and is most often read as level 8, so this ordering of levels does not survive a test on independent scenes. Level 3 shows bidirectional confusion with both level 1 and level 7, occupying the intermediate hue position that the baseline model is insufficiently trained to assign consistently.
+
+\emph{Fine-tuned IR-Combined.} Levels 1.0, 2.0, and 8.2 are recalled completely (11/11, 7/7, 7/7); levels 3.0 and 5.0 reach 6/7 and 7/8, the only material off-diagonal mass being mutual confusion between those two adjacent classes. The support is small enough that each of those confusions is a single image, so the per-class figures should be read as consistent with the pooled result rather than as independently resolved class accuracies. No cross range confusions (for example, level 1 predicted as level 8) are observed.
+
+\emph{Fine-tuned UV-Combined.} A near perfect diagonal across the 11 classes; levels 0 to 6 each exceed 0.91 per class recall. Performance degrades at the high end (level 8 at 0.67, level 9 at 0.50), consistent with the reduced visual contrast of LED differences over near saturated wet soil.
+
+\emph{Fine-tuned IR-Soil-Only.} A clean, sparse diagonal; all represented classes reach 0.91 to 1.00 per class recall with no systematic off diagonal pattern, confirming that infrared imaging supplies sufficient spectral separation for the fine-tuned model to discriminate fine grained moisture levels. Fig.~\ref{fig:confusion} shows the best model confusion matrix.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=0.9\columnwidth]{figs/fig6_confusion_matrix.png}
+\caption{Confusion matrix for the best IR model ($\text{mAP@0.5}=0.995$), as raw detection counts rather than column-normalized rates. Ground-truth support is printed under each class; the validation split holds 40 objects in total, so every off-diagonal cell is one or two images. The rightmost column is the seven false positives, and the empty background row reflects recall of 1.00.}
+\label{fig:confusion}
+\end{figure}
+
+\subsection{Is the Specular Return Load-Bearing?}
+\label{sec:ablation-results}
+The feature maps of Fig.~\ref{fig:features} show activation concentrating on the return, which raises the question of whether the return is merely preferred or actually required. Two complementary experiments answer differently, and the difference is the substantive result.
+
+\emph{Fixed model, altered input.} Re-validating the trained weights on their own validation split with the return inpainted away costs 0.456~mAP@0.5 on average over twelve model--dataset pairs, while the sham control costs 0.024. Return removal is worse than sham in eleven of twelve runs, and two models collapse almost completely (\texttt{UV-Soil-Only-Target} fine-tuned, 0.883 to 0.024; \texttt{UV-Pot-Background} baseline, 0.583 to 0.044). The sham result establishes that this is a response to the missing return rather than to the editing artifact.
+
+\emph{Retrained from scratch.} Networks retrained on each arm behave differently (Table~\ref{tab:ablation}, Fig.~\ref{fig:ablation}). On \texttt{UV-Soil-Only-Baseline} the no-laser arm matches the laser arm exactly (0.9940 versus 0.9940), and on \texttt{UV-Combined} the gap of 0.007 lies within seed noise. Only \texttt{UV-Soil-Only-Target}, the smallest collection at 12.9 images per class, shows a gap exceeding seed variation: 0.9885 to 0.9314, a deficit of 0.057, or 3.9 times the pooled seed s.d. (Welch $t = 4.8$). The sham arm is statistically indistinguishable from the laser arm on all three datasets, with deltas of $-0.001$, $-0.001$, and $-0.005$.
+
+\begin{table}[!t]
+\renewcommand{\arraystretch}{1.3}
+\caption{Three-Arm Retraining, mAP@0.5 (mean $\pm$ s.d., 3 seeds)}
+\label{tab:ablation}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{l c c c c}
+\toprule
+\textbf{Dataset} & \textbf{Train} & \textbf{Laser} & \textbf{Sham} & \textbf{No laser} \\
+\midrule
+UV-Soil-Only-Target & 142 & $0.989 \pm 0.006$ & $0.988 \pm 0.009$ & $0.931 \pm 0.020$ \\
+UV-Soil-Only-Baseline & 246 & $0.994 \pm 0.000$ & $0.993 \pm 0.001$ & $0.994 \pm 0.001$ \\
+UV-Combined & 292 & $0.959 \pm 0.004$ & $0.955 \pm 0.001$ & $0.953 \pm 0.011$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\columnwidth]{figs/fig8_laser_ablation.png}
+\caption{Three-arm retraining from scratch. Only \texttt{UV-Soil-Only-Target}, the smallest collection, shows a cost for removing the specular return. Error bars are s.d. over three seeds; the axis is truncated at 0.85 to make the differences visible.}
+\label{fig:ablation}
+\end{figure}
+
+\emph{Ablation completeness is not uniform across datasets.} The detector does not remove the return equally often in the three collections. Measured as the fraction of frames in which at least one inpainted pixel falls inside the annotated box, removal succeeds in 96\% of \texttt{UV-Soil-Only-Target} frames but only 62\% of \texttt{UV-Combined} and 55\% of \texttt{UV-Soil-Only-Baseline} frames; in the remaining frames the detector erased a bright region adjacent to or outside the box, most often the illuminated pot rim, and left the annotated glow intact. Ablation completeness therefore orders the three datasets exactly as effect size does (96\%, $-0.057$; 62\%, $-0.007$; 55\%, $-0.000$). We consequently do not read the two null results as evidence that the return is dispensable, because a no-laser arm in which roughly two frames in five still contain the return is a partial ablation rather than a clean one. \texttt{UV-Soil-Only-Target}, where removal is near-complete, is the only arm of the three that supports a conclusion, and it shows a real if modest cost. Settling the question requires a mask whose per-frame removal is verified against an independent localization check, which we leave to future work.
+
+Two further leakage channels were checked and excluded. Masking the burned-in ``Moisture: N'' overlay changes mAP@0.5 by at most 0.025 across ten model--dataset pairs (mean $-0.003$), and masking the handwritten moisture cards visible in the lab collections leaves the headline model unchanged at 0.995. Re-encoding identical frames shifts mAP@0.5 by up to 0.015, which we treat as the noise floor for all deltas reported here.
+
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{Intermediate Feature-Map Analysis}
+To examine why the fine-tuned detector discriminates moisture levels reliably, we visualize intermediate backbone activations of the final IR-Combined model on a representative test image (predicted class \texttt{2.0}, confidence 0.95). Fig.~\ref{fig:features} shows, for each backbone stage, the eight channels with the strongest mean activation inside the detected laser region. The progression follows the expected coarse-to-fine semantic hierarchy. Early stages (P1, P2) retain high spatial resolution and respond to low-level primitives: sharp contrast edges, container rims, and color transitions distributed across the entire scene. Intermediate stages (P3, P4) trade spatial resolution for channel depth, and activations reorganize around components of the laser spot, namely its bright core, the surrounding halo, and the container rim. By P4, individual channels (for example, channel 142) respond almost exclusively at the laser location while background activation approaches zero. The deepest stage (P5, SPPF) is spatially coarse but semantically selective: nearly all remaining activation concentrates on the object region and background clutter is suppressed. This progressive suppression of scene context in favor of the laser signature indicates that the network localizes moisture evidence in the LED glow itself rather than in correlated background cues, consistent with the clean confusion-matrix diagonals of Section~IV.
+
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=\textwidth]{figs/fig7_feature_maps.png}
+\caption{Evolution of backbone feature maps in the fine-tuned IR detector for a representative test image (predicted class 2.0, confidence 0.95). Each row shows the eight channels with the strongest mean activation inside the detected laser region at one backbone stage. Early stages (P1, P2) retain full spatial detail and respond to generic edges, contrast, and color transitions. Intermediate stages (P3, P4) concentrate activation on the laser spot core, halo, and rim. The deepest stage (P5, SPPF) is spatially coarse but semantically selective, with activation confined almost entirely to the object region. The red outline marks the most laser-selective channel at each stage.}
+\label{fig:features}
+\end{figure*}
+
+
+
+
+
+\subsection{What Drives Accuracy on This Task}
+The three stage protocol decomposes the contributions of pooling, transfer, and augmentation in a way that the individual gains alone do not. Pooling alone (Stage~2) helps in the ultraviolet regime (UV-Combined: 0.760 to 0.942) but hurts in IR (IR-Combined: 0.804 to 0.591). domain specific fine-tuning (Stage~3) is the dominant driver: every Stage~3 target enters the $\geq 0.91$ regime, and fine-tuning closes the IR-Combined deficit (0.591 to 0.995) and the IR-Soil-Only deficit (0.550 to 0.987). The qualitative validation curve change, namely the disappearance of the early classification loss spikes that signal a COCO-initialized classifier reorganizing its high confidence mass, is the mechanistic correlate. For practitioners assembling a similar moisture-detection system from heterogeneous sources, the implication is concrete: identify the strongest single soil moisture checkpoint first, then fine-tune everything else from it; pooling is a secondary lever that helps for some modalities and not others.
+
+\subsection{Why Baseline Accuracy Tracks Data, Not Illumination}
+The COCO baseline ordering and the fine-tuned ordering cannot both be measuring a property of the illumination. The decisive case is internal to the ultraviolet arm: two captures under the same lamp, the same rig, and the same 11-level taxonomy differ by 0.148 at baseline (0.760 against 0.612), and the only systematic difference between them is 22.4 against 12.9 training images per level. Whatever produces that gap is not illumination, because illumination is held fixed across it.
+
+The infrared baseline of 0.550 is depressed by the same mechanism and by a second one: that capture spans 7 of the 11 levels, so its baseline is computed over a different label space and is not commensurable with either ultraviolet figure. Conditioned on a strong shared starting point, the fine-tuned results are better behaved, and infrared leads at $\text{IoU}=0.5$ with 0.99, which is consistent with stronger spectral contrast for water-content differences. The strict-IoU spread of 0.59 to 0.70 is too narrow, and rests on too few validation objects, for us to rank the conditions on it.
+
+Two limits are worth stating plainly. This collection contains no white-light arm, so it supports no claim about ultraviolet against visible illumination; the comparison it does support is ultraviolet against infrared, with training volume controlled only in the ultraviolet pair. And the broader caution stands on its own: where per-dataset volume differs, a COCO baseline reports the volume, and reading it as a property of the sensing modality will invert the moment domain-specific weights are introduced.
+
+\subsection{Synthetic Data Label Noise}
+None of the training sets behind the results reported here contains diffusion-generated frames; the Mixed Color and Background build consists of the 56 originals and their classical augmentations. The diffusion pipeline was built but its output was not evaluated, and one limitation of its design should be stated before it is. Its bounding boxes are sampled from per class spatial priors rather than computed from a true LED detection in the generated frame, so they are labels by assumption. The size of this noise depends on how often the generative model places the LED at the statistical center assumed by the prior. A natural refinement, deferred to future work, is a post hoc detector, a small auxiliary network trained on real frames only, applied to each generated frame to produce a true LED glow box that replaces the spatial prior fallback. For downstream practitioners, the broader lesson is that programmatic labelling of generative augmentation is an estimate, not a measurement, and its variance must be modeled before assuming a synthetic data win.
+
+\section{Conclusion}
+\label{sec:conclusion}
+Soil moisture readout for precision irrigation has historically tied measurement density to per plant transducer cost. We have shown that a single fixed overhead camera, a low cost commercial stir-probe, and a YOLOv5s detector trained under a three stage protocol can support continuous, non-contact, deployment grade moisture monitoring of an unmodified consumer device. The principal methodological contributions, namely a Class Preserving $\pm 8^{\circ}$ hue cap augmentation policy, label compatible dataset normalization, and domain specific fine-tuning from the strongest soil moisture checkpoint, together lift six of seven datasets to $\text{mAP@0.5} \geq 0.91$ and the IR-combined merge to 0.995. Taken together, the work establishes that vision based reading of a designed signal, a probe LED whose color encodes a quantitative index, is a tractable and cheap path to scaling moisture sensing across the spatial resolution that precision irrigation requires.
+
+\bibliographystyle{IEEEtran}
+\bibliography{refs}
+
+\end{document}
+

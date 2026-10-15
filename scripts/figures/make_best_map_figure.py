@@ -11,6 +11,11 @@ IV-VI. Both are drawn at their printed size (IEEE single column, 3.5 in), so the
 font sizes here are the sizes on the page. The dashed 0.5 line is explained in
 the LaTeX caption rather than a legend, which collided with the bars.
 
+The Mixed Color and Background bars are the retrained runs
+(scripts/training/tr_stir_regularize.py; Stage 1 arm s1_ls_wd_lr3_e100, Stage 3
+arm ls_wd_lr_e60), whose original recipes overfit: each bar is the mean over three seeds of each seed's peak, with
+the seed standard deviation as an error bar.
+
 Display names come from the per-figure name maps, the one place to edit if the
 paper's dataset names change. Keys are the on-disk dataset directory names.
 
@@ -46,6 +51,9 @@ FIGURES = [
         "out": "_fig4_view",
         "label_fs": 6.5,
         "rotate": 35,  # seven one-line names do not fit side by side at 3.5 in
+        "seeds": {"soil_moisture_stir_september": [
+            ROOT / "results" / "stir_reg_round3" / "s1_ls_wd_lr3_e100" / f"seed{s}_results.csv"
+            for s in (0, 1, 2)]},
     },
     {
         "runs": RUNS / "fine-tuned",
@@ -59,25 +67,40 @@ FIGURES = [
         "colors": ["#2f5f9e", "#a8262d", "#2e7d32", "#6a2c8a", "#d4862a"],
         "out": "_fig5_view",
         "label_fs": 6.5,
+        # dataset -> results.csv per seed, replacing runs/<stage dir>/<dataset>
+        "seeds": {"soil_moisture_stir_september": [
+            ROOT / "results" / "stir_reg_round2" / "ls_wd_lr_e60" / f"seed{s}_results.csv"
+            for s in (0, 1, 2)]},
     },
 ]
 
 
-def peak_map50(run_dir):
-    df = pd.read_csv(run_dir / "results.csv")
+def peak_map50(csv_path):
+    df = pd.read_csv(csv_path)
     df.columns = df.columns.str.strip()
     return df["metrics/mAP_0.5"].max()
 
 
+def bar_value(spec, name):
+    """(height, error) for one bar: a single run's peak, or mean and sd over seeds."""
+    seeds = spec.get("seeds", {}).get(name)
+    if not seeds:
+        return peak_map50(spec["runs"] / name / "results.csv"), 0.0
+    peaks = pd.Series([peak_map50(p) for p in seeds])
+    return peaks.mean(), peaks.std(ddof=1)
+
+
 def draw(spec):
     names = list(spec["names"])
-    values = [peak_map50(spec["runs"] / n) for n in names]
+    values, errors = zip(*(bar_value(spec, n) for n in names))
 
     fig, ax = plt.subplots(figsize=(3.5, 2.8))
     bars = ax.bar(range(len(names)), values, color=spec["colors"], edgecolor="black",
-                  linewidth=0.6, width=0.7)
-    for bar, v in zip(bars, values):
-        ax.text(bar.get_x() + bar.get_width() / 2, v + 0.015, f"{v:.4f}",
+                  linewidth=0.6, width=0.7,
+                  yerr=[e if e else float("nan") for e in errors] if any(errors) else None,
+                  error_kw={"elinewidth": 0.8, "capsize": 2.5})
+    for bar, v, e in zip(bars, values, errors):
+        ax.text(bar.get_x() + bar.get_width() / 2, v + e + 0.015, f"{v:.4f}",
                 ha="center", va="bottom", fontsize=7 if len(names) > 5 else 7.5,
                 fontweight="bold")
     ax.axhline(0.5, color="black", linestyle="--", linewidth=0.8)
