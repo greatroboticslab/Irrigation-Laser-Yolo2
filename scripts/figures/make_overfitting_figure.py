@@ -30,8 +30,8 @@ that would sit on a different scale from the other runs. Stage 1 Mixed Color
 is likewise the retrained arm s1_ls_wd_lr3_e100 (COCO init, label smoothing
 0.1, weight_decay 0.05, lr0 0.003 instead of 0.01, 100 epochs). Each training
 curve is the logged one; label smoothing puts a floor under it, so its flattening is not
-on its own evidence of less memorisation. The original run is kept as a faint
-dashed line (SHOW_ORIGINAL).
+on its own evidence of less memorisation. The original runs are not drawn;
+the sweep section of the paper reports them.
 
 Usage (from the project root):
   python scripts/figures/make_overfitting_figure.py
@@ -41,6 +41,7 @@ import csv
 from pathlib import Path
 
 import matplotlib
+import matplotlib.ticker
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
@@ -83,8 +84,8 @@ COLORS = {
     "soil-moisture-v4-september-combined": "#2e8b57",
 }
 
-# The one run family that turns. Drawn heavier so the exception is visible
-# against six curves that do not move.
+# The Mixed Color run, drawn heavier as the paper's primary dataset; it is the
+# three-seed mean from the regularisation sweep, not a single logged run.
 EMPHASIS = "soil_moisture_stir_september"
 
 # Retrained Mixed Color runs, per stage: (sweep results dir, arm). They replace
@@ -92,7 +93,6 @@ EMPHASIS = "soil_moisture_stir_september"
 REG = {1: (UPDATED / "stir_reg_round3", "s1_ls_wd_lr3_e100"),
        3: (UPDATED / "stir_reg_round2", "ls_wd_lr_e60")}
 REG_SEEDS = (0, 1, 2)
-SHOW_ORIGINAL = True
 
 # Epochs before this are ignored when locating the validation minimum: the
 # detector predicts almost nothing in the first few dozen epochs, which gives a
@@ -146,15 +146,11 @@ def panel(ax, base_dir, datasets, metric, title, ylabel, mark_min, retrained=Non
     for ds in datasets:
         if retrained and ds == EMPHASIS:  # retrained = stage number
             c = COLORS[ds]
-            if SHOW_ORIGINAL:
-                orig = read_curve(base_dir / ds / "results.csv")
-                ax.plot(orig["epoch"], orig[metric], color=c, lw=0.6, ls=(0, (2, 1.5)),
-                        alpha=0.45, zorder=3, label="Mixed Color (original)")
             ep, mean, lo, hi = reg_curve(retrained, metric)
             ax.fill_between(ep, lo, hi, color=c, alpha=0.3, lw=0, zorder=3)
             ax.plot(ep, mean, color=c, lw=1.4, zorder=4,
                     marker="o" if len(ep) < 30 else None, ms=1.8,
-                    label="Mixed Color (retrained)")
+                    label=NAME_MAP[ds])
             continue
         path = base_dir / ds / "results.csv"
         if not path.is_file():
@@ -180,6 +176,8 @@ def panel(ax, base_dir, datasets, metric, title, ylabel, mark_min, retrained=Non
     if ylabel:
         ax.set_ylabel(ylabel, fontsize=FS, labelpad=1)
     ax.set_yscale("log")
+    # A panel spanning less than a decade would otherwise label its minor ticks.
+    ax.yaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
     ax.grid(alpha=0.25, lw=0.4, which="both")
     ax.tick_params(labelsize=FS_TICK, pad=1.5, length=2)
     for sp in ax.spines.values():
@@ -208,13 +206,14 @@ def main():
     # outside the window the diagnostic uses anyway.
     axes[0][0].set_ylim(0.008, 0.5)
     axes[0][1].set_ylim(0.0015, 0.30)
+    axes[1][0].set_ylim(0.008, 0.08)
 
     # One legend per column, under the panels, so no curve is hidden.
     fig.tight_layout(rect=(0, 0.22, 1, 1), h_pad=0.4, w_pad=0.6)
     for col, x in ((0, axes[1][0]), (1, axes[1][1])):
         h, l = x.get_legend_handles_labels()
         box = x.get_position()
-        fig.legend(h, l, loc="upper left", bbox_to_anchor=(box.x0 - 0.06, 0.21),
+        fig.legend(h, l, loc="upper left", bbox_to_anchor=(box.x0 - 0.06 - 0.05 * col, 0.21),
                    fontsize=FS_LEG, frameon=False, handlelength=1.4,
                    handletextpad=0.4, labelspacing=0.25, borderaxespad=0)
 
