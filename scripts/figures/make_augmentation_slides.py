@@ -386,7 +386,7 @@ def slide_pipeline_summary(pdf):
             "JPEG Compression  quality 60–95%  p=0.3",
         ]),
         ("Colour  ⚠ hue shifts intentionally small — LED colour = class signal", GREEN, [
-            "HueSaturationValue  hue ±8°, sat ±30, val ±25  p=0.5",
+            "HueSaturationValue  hue ±16° (8 OpenCV units), sat ±30, val ±25  p=0.5",
             "RGBShift  ±15 per channel  p=0.3",
         ]),
         ("Environment Simulation", "#f0883e", [

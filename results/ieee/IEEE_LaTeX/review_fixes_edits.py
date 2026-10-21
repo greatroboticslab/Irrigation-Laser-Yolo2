@@ -71,6 +71,45 @@ EDITS = [
      "the five targets from the Stage I IR-Pot-Background checkpoint to produce the final detector."),
 ]
 
+# Hue cap. augment_stir_september.py sets hue_shift_limit=8; on uint8 images Albumentations
+# adds that in OpenCV hue units (0-179), so the shift is ±16°, verified by running
+# HueSaturationValue(hue_shift_limit=(8, 8)) on images of known hue (every output +16.0°).
+# No crossover measurement exists in the repo, so that claim is replaced by what is known.
+HUE_EDITS = [
+    ("caps hue jitter at $\\pm 8^{\\circ}$, an index",
+     "caps hue jitter at $\\pm 16^{\\circ}$, an index"),
+    ("caps hue jitter at $\\pm 8^{\\circ}$ (the empirical interclass crossover bound) and combines",
+     "caps hue jitter at $\\pm 16^{\\circ}$ and combines"),
+    ("and a $\\pm 20^{\\circ}$ perturbation applied to a level 3 (pink magenta) frame produces a glow that is "
+     "visually indistinguishable from level 7 (blue violet), which injects silently mislabelled samples directly "
+     "into training. We measured the interclass crossover threshold empirically across the five LED states and "
+     "adopted a hue shift cap of $\\pm 8^{\\circ}$ as the largest perturbation that preserves dominant wavelength "
+     "identity for every class.",
+     "and a large enough hue perturbation can move a level 3 (pink magenta) frame toward level 7 (blue violet), "
+     "which injects silently mislabelled samples directly into training. We therefore cap the hue shift at 8 "
+     "OpenCV hue units. OpenCV stores 8-bit hue on a 0 to 179 scale, so one unit is $2^{\\circ}$ and the cap is "
+     "$\\pm 16^{\\circ}$; applying the transform to images of known hue shifts them by exactly that amount. The cap "
+     "was chosen to be small rather than derived from a measured interclass crossover threshold, and whether "
+     "$\\pm 16^{\\circ}$ keeps every level clear of its neighbours has not been tested."),
+    ("constrained HSV hue shift capped at $\\pm 8^{\\circ}$ ($p=0.5$)",
+     "constrained HSV hue shift capped at $\\pm 16^{\\circ}$ ($p=0.5$)"),
+    ("a hue perturbation of $\\pm 7.2^{\\circ}$ at Stage~1 and $\\pm 5.4^{\\circ}$ at Stage~3, both inside the "
+     "$\\pm 8^{\\circ}$ crossover cap established in Section~\\ref{sec:method},",
+     "a hue perturbation of at most $\\pm 7.2^{\\circ}$ at Stage~1 and $\\pm 5.4^{\\circ}$ at Stage~3 (YOLOv5 "
+     "scales hue by a random gain of up to 2\\% and 1.5\\%, \\texttt{hsv\\_h} 0.02 and 0.015), both below the "
+     "$\\pm 16^{\\circ}$ offline cap of Section~\\ref{sec:method},"),
+    ("a Class Preserving $\\pm 8^{\\circ}$ hue cap augmentation policy",
+     "a Class Preserving $\\pm 16^{\\circ}$ hue cap augmentation policy"),
+]
+EDITS += HUE_EDITS
+
+# IR-Soil-Only gain: 0.9869 - 0.5497 = 0.437 (results.csv), not 0.439.
+GAIN_EDITS = [
+    ("the IR-Soil-Only variant improves by 43.9 points", "the IR-Soil-Only variant improves by 43.7 points"),
+    ("(a $+43.9$ point gain", "(a $+43.7$ point gain"),
+]
+EDITS += GAIN_EDITS
+
 
 def apply(text):
     for old, new in EDITS:

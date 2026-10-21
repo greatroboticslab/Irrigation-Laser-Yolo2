@@ -69,7 +69,7 @@ def build_pipeline(seed_offset: int) -> A.Compose:
 
             # --- Colour — KEEP HUE SHIFTS SMALL (LED colour = class signal) ---
             A.HueSaturationValue(
-                hue_shift_limit=8,       # tiny hue shift only
+                hue_shift_limit=8,       # OpenCV hue units on uint8: ±16° (1 unit = 2°)
                 sat_shift_limit=30,
                 val_shift_limit=25,
                 p=0.5,
