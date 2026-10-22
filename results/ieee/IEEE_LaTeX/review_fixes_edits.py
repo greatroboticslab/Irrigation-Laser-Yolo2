@@ -149,6 +149,35 @@ LASER_EDITS = [
 ]
 EDITS += LASER_EDITS
 
+# "8.2" is a class name of the pot-background datasets (soil-moisture-ir, -5sagf, -ir-combined:
+# soil-moisture-1.0/2.0/3.0/5.0/8.2). Their frames show a handwritten card per pot, e.g.
+# "No. 5 IR / Moisture: 8.2", and the class names are those readings. The same paragraph still
+# called IR-Soil-Only and UV-Strawberry-Pot 11 class, contradicting Table II.
+LEVEL82_EDITS = [
+    ("\\subsection{Datasets}\n", "\\subsection{Datasets}\n\\label{sec:datasets}\n"),
+    ("Three were 11 class collections (\\texttt{UV-Soil-Only-Baseline}, \\texttt{IR-Soil-Only}, "
+     "\\texttt{UV-Soil-Only-Target}) imaged",
+     "Three were collections on an 11-level schema (\\texttt{UV-Soil-Only-Baseline}, \\texttt{IR-Soil-Only}, "
+     "\\texttt{UV-Soil-Only-Target}; \\texttt{IR-Soil-Only} covers 7 of the levels) imaged"),
+    ("Two were 5 class ultraviolet and IR collections of the stir probe class (\\texttt{UV-Pot-Background}, "
+     "\\texttt{IR-Pot-Background}).",
+     "Two were 5 class ultraviolet and IR collections of the stir probe class (\\texttt{UV-Pot-Background}, "
+     "\\texttt{IR-Pot-Background}). They photograph numbered pots, each beside a handwritten card that records "
+     "its moisture reading (for example ``No.~5 IR, Moisture: 8.2''), and their class names are those readings: "
+     "1.0, 2.0, 3.0, 5.0 and 8.2. A class such as 8.2 is therefore a recorded reading rather than a fractional "
+     "level, and this five-class set is not the $\\{1, 3, 7, 8, 10\\}$ of \\texttt{Mixed Color and Background}."),
+    ("One was an outdoor 11 class field collection (\\texttt{UV-Strawberry-Pot})",
+     "One was an outdoor field collection covering 9 of the 11 levels (\\texttt{UV-Strawberry-Pot})"),
+    ("Levels 1.0, 2.0, and 8.2 are recalled completely (11/11, 7/7, 7/7); levels 3.0 and 5.0 reach",
+     "Classes 1.0, 2.0, and 8.2, which are the pots' recorded moisture readings "
+     "(Section~\\ref{sec:datasets}), are recalled completely (11/11, 7/7, 7/7); classes 3.0 and 5.0 reach"),
+]
+LEVEL82_EDITS.append(
+    ("Seven datasets covering ultraviolet and infrared illumination and two class taxonomies were used",
+     "Seven datasets covering ultraviolet and infrared illumination and three class taxonomies (an 11-level "
+     "schema, the pots' recorded readings, and the stir-probe levels) were used"))
+EDITS += LEVEL82_EDITS
+
 
 def apply(text):
     for old, new in EDITS:
