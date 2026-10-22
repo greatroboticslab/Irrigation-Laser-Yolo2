@@ -110,6 +110,14 @@ GAIN_EDITS = [
 ]
 EDITS += GAIN_EDITS
 
+# Table IV is wider than the column, so its last header was clipped ("mAP fina"); headers go on two lines.
+TABLE4_EDITS = [
+    ("\\textbf{Run} & \\textbf{Min.\\ ep.} & \\textbf{Final/min.} & \\textbf{mAP peak} & \\textbf{mAP final} \\\\",
+     "\\textbf{Run} & \\textbf{Min.} & \\textbf{Final/} & \\textbf{mAP} & \\textbf{mAP} \\\\\n"
+     " & \\textbf{ep.} & \\textbf{min.} & \\textbf{peak} & \\textbf{final} \\\\"),
+]
+EDITS += TABLE4_EDITS
+
 
 def apply(text):
     for old, new in EDITS:
