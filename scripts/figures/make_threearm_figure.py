@@ -1,4 +1,4 @@
-"""Publication figure for the three-arm laser retrain ablation.
+"""Publication figure for the three-arm specular-return retrain ablation.
 
 Reads `results/threearm_summary.csv` (dataset, arm, seed, best_val_mAP50)
 and writes a single-column IEEE figure.
@@ -45,9 +45,9 @@ TRAIN_IMAGES = {
 
 ORDER = ["soil-moisture-v4-uv", "soil-moisture-v4", "soil-moisture-v4-september-combined"]
 ARMS = [
-    ("laser", "with laser", "#3b6ea5"),
-    ("sham", "sham scar (laser kept)", "#9aa7b4"),
-    ("nolaser", "laser inpainted out", "#c0442e"),
+    ("laser", "with return", "#3b6ea5"),
+    ("sham", "sham scar (return kept)", "#9aa7b4"),
+    ("nolaser", "return inpainted out", "#c0442e"),
 ]
 
 

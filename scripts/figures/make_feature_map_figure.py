@@ -11,7 +11,7 @@ a figure showing how features evolve with depth:
   P5    - coarse, semantic, whole-object activations
 
 For each stage the 8 channels with the strongest mean activation inside the
-detected laser box are shown; the red outline marks the most laser-selective
+detected LED box are shown; the red outline marks the most spot-selective
 channel (highest in-box vs. global activation ratio).
 
 Usage:  python scripts/figures/make_feature_map_figure.py
@@ -112,7 +112,7 @@ def render(names, best):
         wspace=0.06, hspace=0.18,
     )
     fig.suptitle(
-        "Backbone feature-map evolution of the fine-tuned YOLOv5 detector on an IR laser soil image",
+        "Backbone feature-map evolution of the fine-tuned YOLOv5 detector on an IR-Pot-Background test image",
         fontsize=15, y=0.985,
     )
 
@@ -130,12 +130,12 @@ def render(names, best):
     ax_txt.axis("off")
     ax_txt.text(
         0.02, 0.5,
-        "Each row: the 8 channels responding most strongly inside the detected laser region.\n"
+        "Each row: the 8 channels responding most strongly inside the detected LED region.\n"
         "Early layers (P1, P2) keep full spatial detail; generic edges, contrast and color cues fire everywhere.\n"
-        "Middle layers (P3, P4) trade resolution for depth; activations organize around the laser spot\n"
+        "Middle layers (P3, P4) trade resolution for depth; activations organize around the bright spot\n"
         "core, halo and boundary. Deep layers (P5, SPPF) are coarse but semantic; nearly all remaining\n"
         "activation sits on the object region and background clutter is discarded.\n"
-        "Red outline: most laser-selective channel (highest in-box vs. global activation ratio).",
+        "Red outline: most spot-selective channel (highest in-box vs. global activation ratio).",
         fontsize=10.5, va="center", ha="left", linespacing=1.7, color="#333333",
     )
 

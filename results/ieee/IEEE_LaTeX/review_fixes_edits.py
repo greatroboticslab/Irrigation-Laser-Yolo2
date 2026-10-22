@@ -118,6 +118,37 @@ TABLE4_EDITS = [
 ]
 EDITS += TABLE4_EDITS
 
+# "Laser" named two different things: the specular return at the probe tip (ablation) and the
+# detected bright spot (feature maps). Where the return comes from is not documented, so both
+# are named by what is observed. Figs. 7 and 8 are regenerated with the same wording.
+LASER_EDITS = [
+    ("\\subsection{Laser Reflection Ablation}", "\\subsection{Specular Return Ablation}"),
+    ("The \\emph{laser} arm is the unmodified data. The \\emph{no-laser} arm inpaints the detected region "
+     "from surrounding pixels. Inpainting leaves a visible smear, so a drop in the no-laser arm alone",
+     "The \\emph{return} arm is the unmodified data. The \\emph{no-return} arm inpaints the detected region "
+     "from surrounding pixels. Inpainting leaves a visible smear, so a drop in the no-return arm alone"),
+    ("the no-laser arm matches the laser arm exactly (0.9940 versus 0.9940)",
+     "the no-return arm matches the return arm exactly (0.9940 versus 0.9940)"),
+    ("The sham arm is statistically indistinguishable from the laser arm on all three datasets",
+     "The sham arm is statistically indistinguishable from the return arm on all three datasets"),
+    ("\\textbf{Laser} & \\textbf{Sham} & \\textbf{No laser} \\\\",
+     "\\textbf{Return} & \\textbf{Sham} & \\textbf{No return} \\\\"),
+    ("because a no-laser arm in which roughly two frames in five still contain the return",
+     "because a no-return arm in which roughly two frames in five still contain the return"),
+    ("strongest mean activation inside the detected laser region. The progression",
+     "strongest mean activation inside the detected LED region. The progression"),
+    ("activations reorganize around components of the laser spot, namely its bright core",
+     "activations reorganize around components of the bright spot, namely its core"),
+    ("respond almost exclusively at the laser location while background",
+     "respond almost exclusively at the spot location while background"),
+    ("in favor of the laser signature indicates", "in favor of the bright spot indicates"),
+    ("inside the detected laser region at one backbone stage", "inside the detected LED region at one backbone stage"),
+    ("concentrate activation on the laser spot core, halo, and rim", "concentrate activation on the bright spot's core, halo, and rim"),
+    ("The red outline marks the most laser-selective channel at each stage.",
+     "The red outline marks the most spot-selective channel at each stage."),
+]
+EDITS += LASER_EDITS
+
 
 def apply(text):
     for old, new in EDITS:
