@@ -7,7 +7,7 @@ monospace evidence, center-axis vertical descent.
 Drawn 4.6 in wide for a full-column (3.5 in) include, so 9 pt chip text
 prints at about 7 pt.
 
-Fig. 3 of the paper (figs/fig3_three_stage_training.png). Dataset names are the
+Alternative Fig. 3 (navy design), not used by the paper; Fig. 3 is make_flowchart_figure.py. Dataset names are the
 paper's; the parenthetical is each dataset's nc in its data.yaml. Stages 1 and 2
 start from COCO weights (yolov5s.pt); Stage 3 fine-tunes from the IR-Pot-Background
 Stage 1 checkpoint.
@@ -142,7 +142,7 @@ for title, rows, link in STAGES:
 node(y, 'Final Detector Model')
 
 # ── Save ──────────────────────────────────────────────────────────────────────
-OUT = '/Volumes/MacOS/Downloads/Irrigation-Laser-Yolo2/results/ieee/IEEE_LaTeX/figs/fig3_three_stage_training.png'
+OUT = '/Volumes/MacOS/Downloads/Irrigation-Laser-Yolo2/results/training_pipeline_figure.png'   # not used by the paper; Fig. 3 is make_flowchart_figure.py
 plt.savefig(OUT, dpi=DPI, facecolor=WHITE)
 plt.close()
 print(f'Saved: {OUT}')

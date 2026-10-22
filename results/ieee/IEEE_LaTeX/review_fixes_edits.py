@@ -178,13 +178,26 @@ LEVEL82_EDITS.append(
      "schema, the pots' recorded readings, and the stir-probe levels) were used"))
 EDITS += LEVEL82_EDITS
 
+# Fig. 3 returns to the original W1/W2/W3 flowchart design (scripts/figures/make_flowchart_figure.py).
+# It is slide-sized, so it spans both columns; the caption describes its W1 / D2 / W3 stores.
+FLOWCHART_EDITS = [
+    ("\\begin{figure}[!t]\n\\centering\n\\includegraphics[width=\\columnwidth]{figs/fig3_three_stage_training.png}\n",
+     "\\begin{figure*}[!t]\n\\centering\n\\includegraphics[width=0.8\\textwidth]{figs/fig3_three_stage_training.png}\n"),
+    ("Stage III fine-tunes the five targets from the Stage I IR-Pot-Background checkpoint to produce the final "
+     "detector. Parenthetical tags give each dataset's class count.}\n\\label{fig:threestage}\n\\end{figure}",
+     "Its pooled datasets (D2) are among the Stage III targets. Stage III fine-tunes the five targets from the "
+     "Stage I IR-Pot-Background checkpoint (W1) to produce the final detector (W3). In the figure, parentheses "
+     "give the class count where it is not 11.}\n\\label{fig:threestage}\n\\end{figure*}"),
+]
+EDITS += FLOWCHART_EDITS
+
 
 def apply(text):
+    # In order: a later edit may target text an earlier one wrote (FLOWCHART_EDITS).
     for old, new in EDITS:
         n = text.count(old)
         if n != 1:
             sys.exit(f"expected 1 match, found {n}: {old[:60]!r}")
-    for old, new in EDITS:
         text = text.replace(old, new)
     return text
 

@@ -171,12 +171,12 @@ All experiments ran on a research cluster (NVIDIA RTX~2080Ti, 11~GB VRAM, CUDA~1
 
 \emph{Stage 3: Domain specific fine-tuning.} Five targets, including both pooled datasets and \texttt{IR-Soil-Only}, \texttt{UV-Soil-Only-Target}, and \texttt{Mixed Color and Background}, are fine-tuned from the strongest Stage~1 soil moisture checkpoint, selected automatically by scanning baseline result files for peak mAP@0.5 (the chosen source was \texttt{IR-Pot-Background}, $\text{mAP@0.5}=0.804$). The hypothesis is that the soil moisture weight space is closer to the target task than COCO, so feature detectors for small glowing spots against soil clutter, and the classifier's spatial priors, transfer with minimal adaptation. Fig.~\ref{fig:threestage} depicts the protocol. For \texttt{Mixed Color and Background}, on which this recipe overfits, the Stage~3 run adds label smoothing of 0.1 and AdamW weight decay of 0.05 and uses an initial learning rate of $3 \times 10^{-4}$ on a 60-epoch cosine schedule, chosen by the sweep of Section~\ref{sec:stir-reg}.
 
-\begin{figure}[!t]
+\begin{figure*}[!t]
 \centering
-\includegraphics[width=\columnwidth]{figs/fig3_three_stage_training.png}
-\caption{The three-stage protocol. Stage I trains seven datasets independently from COCO weights (\texttt{yolov5s.pt}): the 11-class UV-Soil-Only-Baseline, its 7-class infrared counterpart IR-Soil-Only and 11-class ultraviolet counterpart UV-Soil-Only-Target, the 5-class infrared IR-Pot-Background (transfer source), the 5-class ultraviolet UV-Pot-Background, the 9-class outdoor UV-Strawberry-Pot, and the primary Mixed Color and Background (56 originals, 1157 frames after expansion). Stage II trains the pooled UV-Combined (UV-Soil-Only-Baseline + UV-Strawberry-Pot) and IR-Combined (IR-Pot-Background + UV-Pot-Background), also from COCO weights. Stage III fine-tunes the five targets from the Stage I IR-Pot-Background checkpoint to produce the final detector. Parenthetical tags give each dataset's class count.}
+\includegraphics[width=0.8\textwidth]{figs/fig3_three_stage_training.png}
+\caption{The three-stage protocol. Stage I trains seven datasets independently from COCO weights (\texttt{yolov5s.pt}): the 11-class UV-Soil-Only-Baseline, its 7-class infrared counterpart IR-Soil-Only and 11-class ultraviolet counterpart UV-Soil-Only-Target, the 5-class infrared IR-Pot-Background (transfer source), the 5-class ultraviolet UV-Pot-Background, the 9-class outdoor UV-Strawberry-Pot, and the primary Mixed Color and Background (56 originals, 1157 frames after expansion). Stage II trains the pooled UV-Combined (UV-Soil-Only-Baseline + UV-Strawberry-Pot) and IR-Combined (IR-Pot-Background + UV-Pot-Background), also from COCO weights. Its pooled datasets (D2) are among the Stage III targets. Stage III fine-tunes the five targets from the Stage I IR-Pot-Background checkpoint (W1) to produce the final detector (W3). In the figure, parentheses give the class count where it is not 11.}
 \label{fig:threestage}
-\end{figure}
+\end{figure*}
 
 \section{Results}
 \label{sec:results}
